@@ -7,16 +7,11 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import AppButton from '../components/AppButton'
+import AppButton from '../components/AppButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const WelcomeScreen = ({ navigation }) => {
-  const steps = [
-    'Welcome',
-    'About You',
-    'Profile Info',
-    'Discover',
-  ];
+  const steps = ['Welcome', 'About You', 'Profile Info', 'Discover'];
 
   const cards = [
     {
@@ -40,8 +35,8 @@ const WelcomeScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}>
-
+        showsVerticalScrollIndicator={false}
+      >
         {/* Logo */}
         <Image
           source={require('../assets/images/appicon.png')}
@@ -98,16 +93,17 @@ const WelcomeScreen = ({ navigation }) => {
         </View>
 
         {/* Button */}
-        <AppButton title='Create my Profile' showArrow={true} />
+        <AppButton
+          title="Create my Profile"
+          showArrow={true}
+          onPress={() => navigation.replace('OnboardingScreen')}
+        />
 
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.lock}>🔒</Text>
-          <Text style={styles.footerText}>
-            Your Info is private and secure
-          </Text>
+          <Text style={styles.footerText}>Your Info is private and secure</Text>
         </View>
-
       </ScrollView>
 
       {/* Bottom Heart */}
@@ -219,7 +215,7 @@ const styles = StyleSheet.create({
     borderColor: '#353535',
     padding: 12,
     marginTop: 22,
-    marginBottom:10
+    marginBottom: 10,
   },
 
   row: {
@@ -298,7 +294,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 25,
     alignSelf: 'center',
-    width: "75%",
+    width: '75%',
     height: 90,
   },
 });
