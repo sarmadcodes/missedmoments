@@ -1,0 +1,132 @@
+import Ionicons from '@react-native-vector-icons/ionicons';
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  Animated,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const icons = {
+  Discover: 'compass-outline',
+  Chats: 'chatbubble-ellipses-outline',
+  Matches: 'people-outline',
+  Likes: 'heart-outline',
+  Profile: 'person-outline',
+};
+
+const CustomBottomBar = ({ state, navigation }) => {
+  const insets = useSafeAreaInsets();
+
+  // Animated values for each tab
+  const animations = useRef(
+    state.routes.map((_, i) => new Animated.Value(i === state.index ? 1 : 0)),
+  ).current;
+
+  useEffect(() => {
+    // Animate all icons
+    animations.forEach((anim, i) => {
+      Animated.timing(anim, {
+        toValue: i === state.index ? 1 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [state.index]);
+
+  return (
+    <View style={[styles.absoluteWrapper, { bottom: insets.bottom }]}>
+      <View style={styles.bar}>
+        {state.routes.map((route, index) => {
+          const anim = animations[index];
+          const isFocused = state.index === index;
+
+          // Lift icon by interpolating the animated value
+          const translateY = anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, -15], // lift only icon
+          });
+
+          const scale = anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1.2], // optional small scale
+          });
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={() => navigation.navigate(route.name)}
+              activeOpacity={0.85}
+              style={styles.tab}
+            >
+              {/* ICON */}
+              <Animated.View
+                style={[
+                  styles.iconWrapper,
+                  {
+                    backgroundColor: isFocused ? '#D4A84A' : 'transparent',
+                    borderRadius: 50,
+                    padding: 8,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={icons[route.name]}
+                  size={20}
+                  color={isFocused ? '#fff' : '#ffffffde'}
+                />
+              </Animated.View>
+
+              {/* LABEL stays fixed */}
+              <Text style={[styles.label, isFocused && styles.activeLabel]}>
+                {route.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+export default CustomBottomBar;
+
+const styles = StyleSheet.create({
+  absoluteWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
+  },
+
+  bar: {
+    flexDirection: 'row',
+    height: 75,
+    backgroundColor: '#A70D0D',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    elevation: 8,
+    alignItems: 'flex-end',
+    paddingBottom: 8,
+  },
+
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+
+  label: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '600',
+    marginTop: 6,
+  },
+
+  activeLabel: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+});
