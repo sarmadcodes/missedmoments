@@ -13,7 +13,7 @@ import AppHeader from '../../components/AppHeader';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import PersonCard from '../../components/cards/PersonCard';
 
-const LikesScreen = () => {
+const LikesScreen = ({ navigation }) => {
   const people2 = [
     {
       id: '1',
@@ -52,6 +52,7 @@ const LikesScreen = () => {
             rightContent={
               <TouchableOpacity
                 activeOpacity={0.66}
+                onPress={() => navigation.navigate('NotificationScreen')}
                 style={{
                   padding: 10,
                   backgroundColor: '#333',
@@ -98,7 +99,7 @@ const LikesScreen = () => {
               fontSize: 16,
               fontWeight: '600',
               color: '#fff',
-              marginTop:15,
+              marginTop: 15,
               marginBottom: 5,
             }}
           >

@@ -20,13 +20,12 @@ const icons = {
 const CustomBottomBar = ({ state, navigation }) => {
   const insets = useSafeAreaInsets();
 
-  // Animated values for each tab
   const animations = useRef(
     state.routes.map((_, i) => new Animated.Value(i === state.index ? 1 : 0)),
   ).current;
 
   useEffect(() => {
-    // Animate all icons
+    
     animations.forEach((anim, i) => {
       Animated.timing(anim, {
         toValue: i === state.index ? 1 : 0,
@@ -43,15 +42,14 @@ const CustomBottomBar = ({ state, navigation }) => {
           const anim = animations[index];
           const isFocused = state.index === index;
 
-          // Lift icon by interpolating the animated value
           const translateY = anim.interpolate({
             inputRange: [0, 1],
-            outputRange: [0, -15], // lift only icon
+            outputRange: [0, -15], 
           });
 
           const scale = anim.interpolate({
             inputRange: [0, 1],
-            outputRange: [1, 1.2], // optional small scale
+            outputRange: [1, 1.2],
           });
 
           return (
@@ -61,7 +59,6 @@ const CustomBottomBar = ({ state, navigation }) => {
               activeOpacity={0.85}
               style={styles.tab}
             >
-              {/* ICON */}
               <Animated.View
                 style={[
                   styles.iconWrapper,
@@ -79,7 +76,6 @@ const CustomBottomBar = ({ state, navigation }) => {
                 />
               </Animated.View>
 
-              {/* LABEL stays fixed */}
               <Text style={[styles.label, isFocused && styles.activeLabel]}>
                 {route.name}
               </Text>

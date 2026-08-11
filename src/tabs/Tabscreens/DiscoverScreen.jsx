@@ -101,6 +101,7 @@ const DiscoverScreen = ({navigation}) => {
             rightContent={
               <TouchableOpacity
                 activeOpacity={0.66}
+                onPress={() => navigation.navigate('NotificationScreen')}
                 style={{
                   padding: 10,
                   backgroundColor: '#333',

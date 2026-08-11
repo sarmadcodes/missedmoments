@@ -15,13 +15,12 @@ const ScreenWrapper = ({
   imageSource, 
   backgroundColor
 }) => {
-  // We define the image height at 40% of the screen
   const IMAGE_HEIGHT = height * 0.55;
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <StatusBar barStyle='light-content' backgroundColor='transparent' />
-      {/* 1. BACKGROUND LAYER: THE IMAGE */}
+
       <View style={{ height: IMAGE_HEIGHT, width: width, position: 'absolute', top: 0 }}>
         <Image
           source={imageSource}
@@ -29,22 +28,18 @@ const ScreenWrapper = ({
           resizeMode="cover"
         />
         
-        {/* 2. BLENDING LAYER: THE GRADIENT */}
         <LinearGradient
           colors={[
-            'rgba(255,255,255,0)',   // Top: Totally clear
-            'rgba(50, 0, 0, 0.15)', // Middle: Starting to wash out
-            backgroundColor,         // 80% mark: Hits SOLID WHITE
-            backgroundColor          // Bottom: Stays SOLID WHITE
+            'rgba(255,255,255,0)',   
+            'rgba(50, 0, 0, 0.15)',
+            backgroundColor,        
+            backgroundColor        
           ]}
-          // This makes the image disappear COMPLETELY before the 40% height mark
           locations={[0, 0.4, 0.85, 1]} 
           style={StyleSheet.absoluteFill}
         />
       </View>
 
-      {/* 3. FOREGROUND LAYER: YOUR CONTENT */}
-      {/* This View sits ON TOP of the image and gradient */}
       <View style={styles.contentContainer}>
         {children}
       </View>

@@ -9,7 +9,6 @@ const BUTTON_WIDTH = (width - PADDING * 3 - GAP * 3) / 4;
 const FilterButton = ({ items }) => {
   
 
-  // Only one selected ID at a time
   const [selectedId, setSelectedId] = useState(null);
 
   const selectFilter = (id) => {
@@ -64,7 +63,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    // paddingHorizontal: PADDING,
     marginVertical: 15,
     gap: GAP,
   },
