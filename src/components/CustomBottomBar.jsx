@@ -7,14 +7,15 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const icons = {
-  Discover: 'compass-outline',
-  Chats: 'chatbubble-ellipses-outline',
-  Matches: 'people-outline',
+  Discover: 'compass',
+  Chats: 'chatbubble-ellipses',
+  Matches: 'people',
   Likes: 'heart-outline',
-  Profile: 'person-outline',
+  Profile: 'person-circle-outline',
 };
 
 const CustomBottomBar = ({ state, navigation }) => {
@@ -37,14 +38,19 @@ const CustomBottomBar = ({ state, navigation }) => {
 
   return (
     <View style={[styles.absoluteWrapper, { bottom: insets.bottom }]}>
-      <View style={styles.bar}>
+      <LinearGradient
+        colors={['#5E1414', '#A70D0D', '#661212']}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={styles.bar}
+      >
         {state.routes.map((route, index) => {
           const anim = animations[index];
           const isFocused = state.index === index;
 
           const translateY = anim.interpolate({
             inputRange: [0, 1],
-            outputRange: [0, -15], 
+            outputRange: [0, -15],
           });
 
           const scale = anim.interpolate({
@@ -82,7 +88,7 @@ const CustomBottomBar = ({ state, navigation }) => {
             </TouchableOpacity>
           );
         })}
-      </View>
+      </LinearGradient>
     </View>
   );
 };
@@ -100,12 +106,12 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     height: 75,
-    backgroundColor: '#A70D0D',
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     elevation: 8,
     alignItems: 'flex-end',
     paddingBottom: 8,
+    overflow: 'hidden',
   },
 
   tab: {
@@ -118,7 +124,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#fff',
     fontWeight: '600',
-    marginTop: 6,
+    marginTop: 5,
   },
 
   activeLabel: {

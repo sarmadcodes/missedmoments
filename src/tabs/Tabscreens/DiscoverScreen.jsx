@@ -13,7 +13,7 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import FilterButton from '../../components/FilterButton';
 import MomentCard from '../../components/cards/MomentCard';
 
-const DiscoverScreen = ({navigation}) => {
+const DiscoverScreen = ({ navigation }) => {
   const moments = [
     {
       id: '1',
@@ -130,11 +130,13 @@ const DiscoverScreen = ({navigation}) => {
               timing={item.timing}
               matchPercentage={item.matchPercentage}
               onPress={() => {
-                console.log('Card pressed:', item.title);
-
-                // Example:
-                navigation.navigate('MomentDetails', {
-                  moment: item,
+                navigation.navigate('PersonProfile', {
+                  person: {
+                    image: item.image,
+                    name: item.title,
+                    location: item.location,
+                    age: item.age,
+                  },
                 });
               }}
             />

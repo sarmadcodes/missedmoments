@@ -123,7 +123,7 @@ const ChatsScreen = ({ navigation }) => {
               {...item}
               onPress={() => {
                 console.log('Chat pressed:', item.title);
-                navigation.navigate('ChatDetails', {
+                navigation.navigate('ChattingScreen', {
                   chat: item,
                 });
               }}

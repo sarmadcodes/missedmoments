@@ -12,6 +12,7 @@ import AppIcon from '../../components/AppIcon';
 import AppHeader from '../../components/AppHeader';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import PersonCard from '../../components/cards/PersonCard';
+import BannerCard from '../../components/cards/BannerCard';
 
 const LikesScreen = ({ navigation }) => {
   const people2 = [
@@ -40,6 +41,17 @@ const LikesScreen = ({ navigation }) => {
       location: 'Blue Door Cafe',
     },
   ];
+
+  const openProfile = item => {
+    navigation.navigate('PersonProfile', {
+      person: {
+        image: item.image,
+        name: item.name,
+        location: item.location,
+      },
+    });
+  };
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}
@@ -64,6 +76,12 @@ const LikesScreen = ({ navigation }) => {
             }
           />
 
+          <BannerCard
+            icon="heart"
+            title="You have 5 new likes!"
+            text="Check out your new matches!"
+          />
+
           <Text
             style={{
               fontSize: 16,
@@ -85,11 +103,11 @@ const LikesScreen = ({ navigation }) => {
                 {...item}
                 type="bordered"
                 buttonText="Say Hello"
-                onPress={() => {
-                  console.log('Person pressed:', item.name);
-                }}
+                onPress={() => openProfile(item)}
                 onButtonPress={() => {
-                  console.log('Say Hello:', item.name);
+                  navigation.navigate('ChattingScreen', {
+                    chat: item,
+                  });
                 }}
               />
             )}
@@ -116,11 +134,11 @@ const LikesScreen = ({ navigation }) => {
                 {...item}
                 type="bordered"
                 buttonText="Reveal"
-                onPress={() => {
-                  console.log('Person pressed:', item.name);
-                }}
+                onPress={() => openProfile(item)}
                 onButtonPress={() => {
-                  console.log('Say Hello:', item.name);
+                  navigation.navigate('ChattingScreen', {
+                    chat: item,
+                  });
                 }}
               />
             )}
@@ -136,11 +154,11 @@ const LikesScreen = ({ navigation }) => {
                 {...item}
                 type="bordered"
                 buttonText="Reveal"
-                onPress={() => {
-                  console.log('Person pressed:', item.name);
-                }}
+                onPress={() => openProfile(item)}
                 onButtonPress={() => {
-                  console.log('Say Hello:', item.name);
+                  navigation.navigate('ChattingScreen', {
+                    chat: item,
+                  });
                 }}
               />
             )}

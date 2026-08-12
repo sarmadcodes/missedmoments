@@ -5,7 +5,7 @@ const SplashScreen = ({ navigation }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       navigation.replace('WelcomeScreen'); // Replace with your screen name
-    }, 2000);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, []);

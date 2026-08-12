@@ -12,6 +12,7 @@ const Tab = createBottomTabNavigator();
 const BottomNavigation = () => {
   return (
     <Tab.Navigator
+      initialRouteName="Matches"
       screenOptions={{ headerShown: false }}
       tabBar={props => <CustomBottomBar {...props} />}
     >
