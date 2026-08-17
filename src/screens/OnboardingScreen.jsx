@@ -51,7 +51,7 @@ const OnboardScreen = ({ navigation }) => {
       title: (
         <>
           If its mutual{'\n'}
-          its a <Text style={styles.goldText}>match</Text>
+          it could be that <Text style={styles.goldText}>moment</Text>
         </>
       ),
 

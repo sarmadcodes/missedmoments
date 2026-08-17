@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppIcon from '../../components/AppIcon';
 import AppHeader from '../../components/AppHeader';
@@ -20,7 +20,7 @@ import SwipeCard, {
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.28;
 const SWIPE_OUT_DURATION = 250;
 
-const MatchesScreen = () => {
+const MatchesScreen = ({ navigation }) => {
   const people = [
     {
       id: '1',
@@ -165,12 +165,24 @@ const MatchesScreen = () => {
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const [toastLabel, setToastLabel] = useState(null);
 
+  useEffect(() => {
+    position.setValue({ x: 0, y: 0 });
+  }, [currentIndex]);
+
   const showToast = label => {
     setToastLabel(label);
     Animated.sequence([
-      Animated.timing(toastOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+      Animated.timing(toastOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
       Animated.delay(700),
-      Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(toastOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
     ]).start(() => setToastLabel(null));
   };
 
@@ -197,6 +209,8 @@ const MatchesScreen = () => {
           forceSwipe('right');
         } else if (gesture.dx < -SWIPE_THRESHOLD) {
           forceSwipe('left');
+        } else if (gesture.dy < -SWIPE_THRESHOLD) {
+          forceSwipe('up');
         } else {
           resetPosition();
         }
@@ -205,9 +219,15 @@ const MatchesScreen = () => {
   ).current;
 
   const forceSwipe = direction => {
-    const x = direction === 'right' ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5;
+    const x =
+      direction === 'right'
+        ? SCREEN_WIDTH * 1.5
+        : direction === 'left'
+        ? -SCREEN_WIDTH * 1.5
+        : 0;
+    const y = direction === 'up' ? -SCREEN_WIDTH * 1.5 : 0;
     Animated.timing(position, {
-      toValue: { x, y: 0 },
+      toValue: { x, y },
       duration: SWIPE_OUT_DURATION,
       useNativeDriver: false,
     }).start(() => onSwipeComplete(direction));
@@ -218,11 +238,21 @@ const MatchesScreen = () => {
     if (direction === 'right') {
       handleLikePerson(person);
       showToast('like');
-    } else {
+    } else if (direction === 'left') {
       handlePassPerson(person);
       showToast('pass');
+    } else if (direction === 'up') {
+      navigation.navigate('PersonProfile', {
+        person: {
+          image: person.image,
+          name: person.name,
+          age: person.age,
+          location: person.location,
+          interests: person.interests,
+          likes: person.likes,
+        },
+      });
     }
-    position.setValue({ x: 0, y: 0 });
     setCurrentIndex(prev => prev + 1);
   };
 
@@ -279,19 +309,44 @@ const MatchesScreen = () => {
               style={[styles.cardWrapper, getCardStyle()]}
               {...panResponder.panHandlers}
             >
-              <SwipeCard person={person} />
+              <SwipeCard
+                person={person}
+                onPress={() =>
+                  navigation.navigate('PersonProfile', {
+                    person: {
+                      image: person.image,
+                      name: person.name,
+                      age: person.age,
+                      location: person.location,
+                      interests: person.interests,
+                      likes: person.likes,
+                    },
+                  })
+                }
+              />
 
-              <Animated.View style={[styles.stamp, styles.likeStamp, { opacity: likeOpacity }]}>
+              <Animated.View
+                style={[
+                  styles.stamp,
+                  styles.likeStamp,
+                  { opacity: likeOpacity },
+                ]}
+              >
                 <Text style={styles.likeStampText}>LIKE</Text>
               </Animated.View>
-              <Animated.View style={[styles.stamp, styles.nopeStamp, { opacity: nopeOpacity }]}>
+              <Animated.View
+                style={[
+                  styles.stamp,
+                  styles.nopeStamp,
+                  { opacity: nopeOpacity },
+                ]}
+              >
                 <Text style={styles.nopeStampText}>PASS</Text>
               </Animated.View>
             </Animated.View>
           );
         }
 
-        // Peek of the next couple of cards behind the top one
         const depth = index - currentIndex;
         return (
           <Animated.View
@@ -310,7 +365,9 @@ const MatchesScreen = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}
+    >
       <AppIcon />
       <AppHeader title="Matches" />
 
@@ -406,10 +463,10 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 15,
-    marginBottom: "30%",
+    paddingHorizontal: 30,
+    marginBottom: '35%',
   },
   actionBtn: {
     width: 55,
@@ -417,7 +474,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 16,
+
     backgroundColor: '#111',
     borderWidth: 1.5,
   },
@@ -445,7 +502,7 @@ const styles = StyleSheet.create({
   },
   toast: {
     position: 'absolute',
-    bottom: 125,
+    bottom: 130,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',

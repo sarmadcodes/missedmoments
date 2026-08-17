@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 
 const AppButton = ({
   title = '',
@@ -17,7 +18,7 @@ const AppButton = ({
   height = 50,
   borderRadius = 50,
   borderWidth = 1,
-  borderColor = '#FF5153',
+  borderColor = '#D24646',
   backgroundColor = '#B60406',
   textColor = '#FFFFFF',
   leftIcon,
@@ -27,9 +28,11 @@ const AppButton = ({
   arrowIcon = 'arrow-forward',
   arrowSize = 20,
   arrowColor,
-
   buttonStyle,
   textStyle,
+  // Gradient colors
+  gradientColors = ['#700B0C', '#E5090B', '#700B0C'],
+  gradientLocations = [0, 0.5, 1],
 }) => {
   const iconColor = leftIconColor || textColor;
   const rightColor = arrowColor || textColor;
@@ -40,52 +43,72 @@ const AppButton = ({
         disabled={disabled || loading}
         onPress={onPress}
         style={({ pressed }) => [
-          styles.button,
           {
             width: '100%',
             height,
             borderRadius,
-            borderWidth,
-            borderColor,
-            backgroundColor: disabled ? '#FF5153' : backgroundColor,
             opacity: pressed ? 0.66 : 1,
           },
           buttonStyle,
         ]}
       >
-        {loading ? (
-          <ActivityIndicator color={textColor} />
-        ) : (
-          <>
-            {/* Left Icon */}
-            {leftIcon && (
-              <Ionicons
-                name={leftIcon}
-                size={leftIconSize}
-                color={iconColor}
-                style={styles.leftIcon}
-              />
-            )}
+        <LinearGradient
+          colors={
+            disabled
+              ? ['#7A7A7A', '#A0A0A0', '#7A7A7A']
+              : gradientColors
+          }
+          locations={gradientLocations}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={[
+            styles.button,
+            {
+              height,
+              borderRadius,
+              borderWidth,
+              borderColor,
+            },
+          ]}
+        >
+          {loading ? (
+            <ActivityIndicator color={textColor} />
+          ) : (
+            <>
+              {/* Left Icon */}
+              {leftIcon && (
+                <Ionicons
+                  name={leftIcon}
+                  size={leftIconSize}
+                  color={iconColor}
+                  style={styles.leftIcon}
+                />
+              )}
 
-            {/* Title */}
-            <Text
-              numberOfLines={1}
-              style={[styles.title, { color: textColor }, textStyle]}
-            >
-              {title}
-            </Text>
+              {/* Title */}
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.title,
+                  { color: textColor },
+                  textStyle,
+                ]}
+              >
+                {title}
+              </Text>
 
-            {/* Right Arrow */}
-            {showArrow && (
-              <Ionicons
-                name={arrowIcon}
-                size={arrowSize}
-                color={rightColor}
-                style={styles.rightIcon}
-              />
-            )}
-          </>
-        )}
+              {/* Right Arrow */}
+              {showArrow && (
+                <Ionicons
+                  name={arrowIcon}
+                  size={arrowSize}
+                  color={rightColor}
+                  style={styles.rightIcon}
+                />
+              )}
+            </>
+          )}
+        </LinearGradient>
       </Pressable>
     </View>
   );
@@ -104,10 +127,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
+    overflow: 'hidden',
   },
 
   title: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
 

@@ -159,7 +159,7 @@ const ProfileScreen = ({ navigation }) => {
             title="Edit Profile"
             icon="pencil-outline"
             height={40}
-            backgroundColor='#D4A84A'
+            gradientColors={['#A26B20', '#FFCC74', '#A26B20']}
             textColor='#000'
             borderWidth={0}
             leftIcon="pencil-outline"

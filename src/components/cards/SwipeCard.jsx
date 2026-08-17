@@ -1,5 +1,12 @@
 import React from 'react';
-import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import {
+  Dimensions,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from '@react-native-vector-icons/ionicons';
 
@@ -8,14 +15,17 @@ export const CARD_WIDTH = SCREEN_WIDTH - 30; // matches paddingHorizontal:15 on 
 export const CARD_HEIGHT = SCREEN_HEIGHT * 0.5;
 export { SCREEN_WIDTH };
 
-const SwipeCard = ({ person }) => {
+const SwipeCard = ({ person, onPress }) => {
   const interests = person.interests || ['Music', 'Travel'];
   const likes = person.likes ?? 120;
 
   return (
     <View style={styles.card}>
       <Image source={person.image} style={styles.image} />
-      <LinearGradient colors={['transparent', '#000000E6']} style={styles.gradient}>
+      <LinearGradient
+        colors={['transparent', '#000000E6']}
+        style={styles.gradient}
+      >
         <Text style={styles.name}>
           {person.name}
           {person.age ? `, ${person.age}` : ''}
@@ -35,8 +45,17 @@ const SwipeCard = ({ person }) => {
           </View>
           <View style={styles.infoPill}>
             <Ionicons name="sparkles-outline" size={11} color="#D4A84A" />
-            <Text style={styles.infoText}>{interests.slice(0, 2).join(' • ')}</Text>
+            <Text style={styles.infoText}>
+              {interests.slice(0, 2).join(' • ')}
+            </Text>
           </View>
+          <TouchableOpacity onPress={onPress}
+            activeOpacity={0.66}
+            style={styles.swipeUpIndicator}
+          >
+            <Ionicons name="arrow-up" size={12} color="#D4A84A" />
+            <Text style={styles.swipeUpText}>View</Text>
+          </TouchableOpacity>
         </View>
       </LinearGradient>
     </View>
@@ -103,6 +122,21 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     marginLeft: 5,
+  },
+  swipeUpIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginLeft: 'auto',
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    backgroundColor: '#000000a1',
+    borderRadius: 50,
+  },
+  swipeUpText: {
+    color: '#D4A84A',
+    fontSize: 10,
+    fontWeight: '600',
   },
 });
 

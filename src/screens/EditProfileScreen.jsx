@@ -79,8 +79,8 @@ const EditProfileScreen = ({ navigation }) => {
                 title="Save"
                 width={80}
                 height={30}
-                backgroundColor="#111"
-                borderColor="#444"
+                gradientColors={['#000', '#111', '#000']}
+                borderColor="#333"
                 onPress={() => navigation.goBack()}
               />
             }
@@ -277,8 +277,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   interestsSection: {
-    marginTop: 10,
-    marginBottom: 20,
+    marginVertical:10,
   },
   sectionTitle: {
     fontSize: 15,
@@ -289,18 +288,18 @@ const styles = StyleSheet.create({
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 7,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 999,
+    borderRadius: 50,
     borderWidth: 1,
     borderColor: '#D4A84A',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: 'transparent',
-    marginRight: 8,
+    marginRight: 5,
     marginBottom: 8,
   },
   activeChip: {
