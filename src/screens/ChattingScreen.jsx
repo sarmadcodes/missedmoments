@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -26,7 +26,30 @@ const ChattingScreen = ({ navigation, route }) => {
     ...routeChat,
   };
   const [message, setMessage] = useState('');
-  const messages = [];
+  // Local-only for now; swap for the conversation from the API (and a socket
+  // subscription) once chat is wired to the backend.
+  const [messages, setMessages] = useState([]);
+  const scrollRef = useRef(null);
+
+  const handleSend = () => {
+    const text = message.trim();
+    if (!text) {
+      return;
+    }
+    setMessages(prev => [
+      ...prev,
+      {
+        id: `${Date.now()}`,
+        sender: 'me',
+        text,
+        time: new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      },
+    ]);
+    setMessage('');
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}>
@@ -55,11 +78,16 @@ const ChattingScreen = ({ navigation, route }) => {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={10}
       >
         <ScrollView
+          ref={scrollRef}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          onContentSizeChange={() =>
+            scrollRef.current?.scrollToEnd({ animated: true })
+          }
           contentContainerStyle={{ paddingBottom: 20, flexGrow: 1 }}
         >
           <LinearGradient
@@ -108,8 +136,17 @@ const ChattingScreen = ({ navigation, route }) => {
             placeholder="Say the thing you almost said"
             placeholderTextColor="#777"
             style={styles.input}
+            multiline
+            maxLength={2000}
+            returnKeyType="send"
+            blurOnSubmit={false}
+            onSubmitEditing={handleSend}
           />
-          <TouchableOpacity style={{ marginLeft: 8 }}>
+          <TouchableOpacity
+            style={{ marginLeft: 8, opacity: message.trim() ? 1 : 0.4 }}
+            disabled={!message.trim()}
+            onPress={handleSend}
+          >
             <Ionicons name="send" size={16} color="#D4A84A" />
           </TouchableOpacity>
         </View>

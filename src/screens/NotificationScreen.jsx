@@ -26,10 +26,7 @@ const NotificationCard = ({
     <View style={styles.notificationCard}>
       {/* Profile Image */}
       <View style={styles.imageWrapper}>
-        <Image
-          source={{uri: image}}
-          style={styles.profileImage}
-        />
+        <Image source={image} style={styles.profileImage} />
 
         {showDot && <View style={styles.notificationDot} />}
       </View>
@@ -53,8 +50,7 @@ const NotificationScreen = () => {
   const yesterdayNotifications = [
     {
       id: 1,
-      image:
-        'https://randomuser.me/api/portraits/women/44.jpg',
+      image: require('../assets/images/overlay1.png'),
       message: 'Ava Willams post for a first time in a while.',
       time: '2m',
     },
@@ -63,30 +59,26 @@ const NotificationScreen = () => {
   const lastSevenDaysNotifications = [
     {
       id: 2,
-      image:
-        'https://randomuser.me/api/portraits/men/32.jpg',
+      image: require('../assets/images/overlay2.png'),
       message:
         'New Follow suggestion and other accepted your follow request.',
       time: '2m',
     },
     {
       id: 3,
-      image:
-        'https://randomuser.me/api/portraits/women/44.jpg',
+      image: require('../assets/images/overlay3.png'),
       message: 'Ava Willams post for a first time in a while.',
       time: '2m',
     },
     {
       id: 4,
-      image:
-        'https://randomuser.me/api/portraits/women/68.jpg',
+      image: require('../assets/images/overlay4.png'),
       message: 'James others like a story.',
       time: '4d',
     },
     {
       id: 5,
-      image:
-        'https://randomuser.me/api/portraits/women/65.jpg',
+      image: require('../assets/images/overlay1.png'),
       message: 'Ava Willams post for a first time in a while.',
       time: '2m',
     },
@@ -160,7 +152,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingBottom: '25%',
+    paddingBottom: 40,
   },
 
   headerSection: {
