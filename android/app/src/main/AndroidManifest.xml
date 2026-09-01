@@ -2,6 +2,32 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Core to the product: Discover ranks people by how recently they were
+         physically near you. COARSE is requested alongside FINE because
+         Android 12+ lets the user grant only approximate location, and the
+         app must still work in that case. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Profile photos. READ_MEDIA_IMAGES covers Android 13+; the legacy
+         READ_EXTERNAL_STORAGE is capped below it for older devices. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Location is central to the app, so declare the hardware as optional
+         rather than required; a device without GPS can still fall back to
+         network location. -->
+    <uses-feature
+        android:name="android.hardware.location"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+
     <application
       android:name=".MainApplication"
       android:label="@string/app_name"
