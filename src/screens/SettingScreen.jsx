@@ -6,11 +6,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppIcon from '../components/AppIcon';
 import AppHeader from '../components/AppHeader';
 import Ionicons from '@react-native-vector-icons/ionicons';
+import { useFocusEffect } from '@react-navigation/native';
+import { users as usersApi } from '../services/endpoints';
+import { friendlyError } from '../utils/format';
 
 const SectionHeader = ({ icon, title }) => (
   <View style={styles.sectionHeaderRow}>
@@ -64,12 +67,41 @@ const NavRow = ({ icon, title, onPress, danger, isLast }) => (
 const SettingScreen = ({ navigation }) => {
   const [invisibleMode, setInvisibleMode] = useState(false);
   const [discoverableNearby, setDiscoverableNearby] = useState(true);
-  const [allNotifications, setAllNotifications] = useState(false);
+  const [allNotifications, setAllNotifications] = useState(true);
   const [newMatchAlert, setNewMatchAlert] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleClear = () => {
-    // Wire this up to whatever "Clear" is supposed to reset once that's defined
-    console.log('Clear pressed');
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      usersApi
+        .me()
+        .then(me => {
+          if (!active) return;
+          setInvisibleMode(Boolean(me.isInvisible));
+          setDiscoverableNearby(Boolean(me.isDiscoverable));
+          setAllNotifications(Boolean(me.notifyAll));
+          setNewMatchAlert(Boolean(me.notifyNewMatch));
+        })
+        .catch(err => active && setError(friendlyError(err)));
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
+  /**
+   * Optimistic: flip the switch immediately, then persist. If the request
+   * fails the switch goes back, so the UI never claims a setting was saved
+   * when it was not.
+   */
+  const persist = (field, value, setter) => {
+    setter(value);
+    setError(null);
+    usersApi.update({ [field]: value }).catch(err => {
+      setter(!value);
+      setError(friendlyError(err));
+    });
   };
 
   return (
@@ -80,6 +112,7 @@ const SettingScreen = ({ navigation }) => {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={{ paddingBottom: 40 }}>
           <AppHeader title="Settings" />
+          {error ? <Text style={styles.settingsError}>{error}</Text> : null}
 
           {/* Visibility */}
           <SectionHeader icon="eye-outline" title="Visibility" />
@@ -89,14 +122,16 @@ const SettingScreen = ({ navigation }) => {
               title="Invisible Mode"
               subtitle="Scroll without being seen"
               value={invisibleMode}
-              onValueChange={setInvisibleMode}
+              onValueChange={v => persist('isInvisible', v, setInvisibleMode)}
             />
             <ToggleRow
               icon="navigate-outline"
               title="Discoverable Nearby"
               subtitle="Show me in others nearby feed"
               value={discoverableNearby}
-              onValueChange={setDiscoverableNearby}
+              onValueChange={v =>
+                persist('isDiscoverable', v, setDiscoverableNearby)
+              }
               isLast
             />
           </View>
@@ -109,14 +144,14 @@ const SettingScreen = ({ navigation }) => {
               title="All Notifications"
               subtitle="Get notified about everything"
               value={allNotifications}
-              onValueChange={setAllNotifications}
+              onValueChange={v => persist('notifyAll', v, setAllNotifications)}
             />
             <ToggleRow
               icon="alert-circle-outline"
               title="New Match Alert"
               subtitle="A small chime when it's mutual"
               value={newMatchAlert}
-              onValueChange={setNewMatchAlert}
+              onValueChange={v => persist('notifyNewMatch', v, setNewMatchAlert)}
               isLast
             />
           </View>
@@ -151,6 +186,12 @@ const SettingScreen = ({ navigation }) => {
 export default SettingScreen;
 
 const styles = StyleSheet.create({
+  settingsError: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
   clearText: {
     color: '#999',
     fontSize: 13,

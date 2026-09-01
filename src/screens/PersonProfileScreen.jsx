@@ -1,4 +1,5 @@
 import {
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -6,112 +7,158 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-
-// Dummy fallback — matches the shape a real `person` param should have
-const dummyPerson = {
-  image: require('../assets/images/overlay3.png'),
-  name: 'Elizabeth',
-  location: 'Blue Door Café, New York',
-  credits: 40,
-  stats: { liked: 106, conversations: 24, connections: 12 },
-  about:
-    'I love good conversations, cozy cafés and meaningful connections. Looking to meet new people and see where it goes.',
-  details: {
-    height: '5\'6"',
-    education: "Bachelor's",
-    work: 'Marketing Manager',
-    religion: 'Christian',
-    smoke: 'No',
-    drink: 'Socially',
-  },
-  interests: ['Coffee', 'Travel', 'Music', 'Photography', 'Books'],
-  photos: [
-    require('../assets/images/overlay3.png'),
-    require('../assets/images/overlay1.png'),
-    require('../assets/images/overlay2.png'),
-    require('../assets/images/overlay4.png'),
-  ],
-};
+import { Loading, ErrorState } from '../components/ScreenState';
+import {
+  users as usersApi,
+  likes as likesApi,
+  safety as safetyApi,
+} from '../services/endpoints';
+import { avatarSource, friendlyError } from '../utils/format';
 
 const interestIcons = {
-  Coffee: 'cafe-outline',
-  Travel: 'airplane-outline',
   Music: 'musical-notes-outline',
+  Travel: 'airplane-outline',
+  Food: 'restaurant-outline',
   Photography: 'camera-outline',
-  Books: 'book-outline',
+  Gaming: 'game-controller-outline',
+  Dance: 'body-outline',
+  Party: 'star-outline',
+  Movies: 'film-outline',
+  Sports: 'fitness-outline',
 };
 
-const StatItem = ({ icon, value, label, color }) => (
-  <View style={styles.statItem}>
-    <Ionicons name={icon} size={16} color={color} />
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
-  </View>
-);
-
-const DetailRow = ({ icon, label, value }) => (
-  <View style={styles.detailItem}>
-    <Ionicons
-      name={icon}
-      size={13}
-      color="#E90000"
-      style={{ marginRight: 8 }}
-    />
-    <View>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
-    </View>
-  </View>
-);
-
 const PersonProfileScreen = ({ navigation, route }) => {
-  const passedPerson = route?.params?.person;
+  const userId = route?.params?.userId;
 
-  // Placeholder data is used ONLY when no profile was passed at all (demo /
-  // direct navigation). It is never merged underneath a real profile: a field
-  // the real person hasn't filled in must render as absent, not silently
-  // inherit an invented bio, job or religion belonging to nobody.
-  const person = passedPerson || dummyPerson;
+  const [person, setPerson] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [acting, setActing] = useState(false);
 
-  const stats = person.stats;
-  const details = person.details || {};
-  const interests = person.interests || [];
-  const photos = person.photos || [];
+  const load = useCallback(async () => {
+    if (!userId) {
+      setError('No profile was selected.');
+      setLoading(false);
+      return;
+    }
+    setError(null);
+    try {
+      setPerson(await usersApi.profile(userId));
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
 
-  const detailFields = [
-    { key: 'height', icon: 'resize-outline', label: 'Height' },
-    { key: 'education', icon: 'school-outline', label: 'Education' },
-    { key: 'work', icon: 'briefcase-outline', label: 'Work' },
-    { key: 'religion', icon: 'sparkles-outline', label: 'Religion' },
-    { key: 'smoke', icon: 'close-circle-outline', label: 'Smoke' },
-    { key: 'drink', icon: 'wine-outline', label: 'Drink' },
-  ].filter(field => details[field.key]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const handleStartConversation = () => {
-    navigation.navigate('ChattingScreen', {
-      chat: {
-        image: person.image,
-        title: person.name,
-        location: person.location,
+  const handleLike = async () => {
+    setActing(true);
+    try {
+      const result = await likesApi.act(userId, 'like');
+      if (result?.matched) {
+        Alert.alert("It's a match!", `You and ${person.name} liked each other.`, [
+          {
+            text: 'Say hello',
+            onPress: () =>
+              navigation.navigate('ChattingScreen', {
+                matchId: result.matchId,
+                chat: {
+                  title: person.name,
+                  image: avatarSource(person.photos?.[0]),
+                  userId,
+                },
+              }),
+          },
+          { text: 'Later', style: 'cancel' },
+        ]);
+      } else {
+        Alert.alert('Liked', 'They will only find out if they like you back.');
+      }
+    } catch (err) {
+      Alert.alert('Could not save that', friendlyError(err));
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const handleBlock = () => {
+    Alert.alert(
+      `Block ${person?.name}?`,
+      'They will not be able to see your profile or message you, and any conversation you have will be closed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await safetyApi.block(userId);
+              navigation.goBack();
+            } catch (err) {
+              Alert.alert('Could not block', friendlyError(err));
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleReport = () => {
+    Alert.alert('Report this profile?', 'Our team will review it.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Report',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await safetyApi.report(userId, 'inappropriate');
+            Alert.alert('Thank you', 'We will take a look.');
+          } catch (err) {
+            Alert.alert('Could not report', friendlyError(err));
+          }
+        },
       },
-    });
+    ]);
   };
 
-  const handleLike = () => {
-    console.log('Liked:', person.name);
-  };
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Loading label="Loading profile" />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !person) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.topRow}>
+          <TouchableOpacity style={styles.iconCircle} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        <ErrorState message={error || 'Profile unavailable'} onRetry={load} />
+      </SafeAreaView>
+    );
+  }
+
+  const photos = person.photos ?? [];
+  const interests = person.interests ?? [];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: '15%' }}
+        contentContainerStyle={{ paddingBottom: 40 }}
       >
-        {/* Header photo block */}
         <LinearGradient
           colors={['#000', '#000']}
           start={{ x: 0.5, y: 0 }}
@@ -125,60 +172,32 @@ const PersonProfileScreen = ({ navigation, route }) => {
             >
               <Ionicons name="arrow-back" size={18} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconCircle}>
-              {/* <Ionicons name="ellipsis-horizontal" size={18} color="#fff" /> */}
+            <TouchableOpacity style={styles.iconCircle} onPress={handleReport}>
+              <Ionicons name="flag-outline" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
 
-          <Image source={person.image} style={styles.avatar} />
+          <Image source={avatarSource(photos[0])} style={styles.avatar} />
 
-          <Text style={styles.name}>{person.name}</Text>
+          <Text style={styles.name}>
+            {person.name}
+            {person.age ? `, ${person.age}` : ''}
+          </Text>
 
-          {person.location ? (
+          {person.city ? (
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={12} color="#D4A84A" />
-              <Text style={styles.locationText}> {person.location}</Text>
+              <Text style={styles.locationText}> {person.city}</Text>
             </View>
           ) : null}
-
-          {person.credits != null && (
-            <View style={styles.creditsPill}>
-              <Ionicons name="cash-outline" size={12} color="#D4A84A" />
-              <Text style={styles.creditsText}> {person.credits} Credits</Text>
-            </View>
-          )}
         </LinearGradient>
 
         <View style={{ paddingHorizontal: 15 }}>
-          {/* Stats */}
-          {stats && (
-            <View style={styles.statsRow}>
-              <StatItem
-                icon="heart"
-                value={stats.liked ?? 0}
-                label="People liked"
-                color="#E90000"
-              />
-              <StatItem
-                icon="chatbox-ellipses-outline"
-                value={stats.conversations ?? 0}
-                label="Conversations"
-                color="#D4A84A"
-              />
-              <StatItem
-                icon="people-outline"
-                value={stats.connections ?? 0}
-                label="Connections"
-                color="#D4A84A"
-              />
-            </View>
-          )}
-
-          {/* Action buttons */}
           <View style={styles.actionsRow}>
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={handleStartConversation}
+              onPress={handleLike}
+              disabled={acting}
               style={{ flex: 1 }}
             >
               <LinearGradient
@@ -187,27 +206,22 @@ const PersonProfileScreen = ({ navigation, route }) => {
                 end={{ x: 1, y: 0 }}
                 style={styles.startBtn}
               >
-                <Ionicons
-                  name="chatbubble-ellipses-outline"
-                  size={14}
-                  color="#fff"
-                />
-                <Text style={styles.startBtnText}> Start Conversation</Text>
+                <Ionicons name="heart" size={14} color="#fff" />
+                <Text style={styles.startBtnText}> Like</Text>
               </LinearGradient>
             </TouchableOpacity>
 
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={handleLike}
-              style={styles.likeBtn}
+              onPress={handleBlock}
+              style={styles.blockBtn}
             >
-              <Ionicons name="heart-outline" size={14} color="#E90000" />
-              <Text style={styles.likeBtnText}> Like</Text>
+              <Ionicons name="ban-outline" size={14} color="#E90000" />
+              <Text style={styles.blockBtnText}> Block</Text>
             </TouchableOpacity>
           </View>
 
-          {/* About */}
-          {(person.about || detailFields.length > 0) && (
+          {person.bio ? (
             <View style={styles.card}>
               <View style={styles.cardHeaderRow}>
                 <Ionicons
@@ -218,27 +232,10 @@ const PersonProfileScreen = ({ navigation, route }) => {
                 />
                 <Text style={styles.cardHeaderText}>About {person.name}</Text>
               </View>
-
-              {person.about ? (
-                <Text style={styles.aboutText}>{person.about}</Text>
-              ) : null}
-
-              {detailFields.length > 0 && (
-                <View style={styles.detailsGrid}>
-                  {detailFields.map(field => (
-                    <DetailRow
-                      key={field.key}
-                      icon={field.icon}
-                      label={field.label}
-                      value={details[field.key]}
-                    />
-                  ))}
-                </View>
-              )}
+              <Text style={styles.aboutText}>{person.bio}</Text>
             </View>
-          )}
+          ) : null}
 
-          {/* Interests */}
           {interests.length > 0 && (
             <View style={styles.card}>
               <View style={styles.cardHeaderRow}>
@@ -265,24 +262,24 @@ const PersonProfileScreen = ({ navigation, route }) => {
             </View>
           )}
 
-          {/* Photos */}
-          {photos.length > 0 && (
+          {photos.length > 1 && (
             <>
-              <View style={styles.photosHeaderRow}>
-                <View style={styles.cardHeaderRow}>
-                  <Ionicons
-                    name="image-outline"
-                    size={15}
-                    color="#E90000"
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text style={styles.cardHeaderText}>Photos</Text>
-                </View>
+              <View style={styles.cardHeaderRow}>
+                <Ionicons
+                  name="image-outline"
+                  size={15}
+                  color="#E90000"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.cardHeaderText}>Photos</Text>
               </View>
-
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {photos.map((photo, index) => (
-                  <Image key={index} source={photo} style={styles.photoThumb} />
+                  <Image
+                    key={index}
+                    source={avatarSource(photo)}
+                    style={styles.photoThumb}
+                  />
                 ))}
               </ScrollView>
             </>
@@ -296,197 +293,74 @@ const PersonProfileScreen = ({ navigation, route }) => {
 export default PersonProfileScreen;
 
 const styles = StyleSheet.create({
-  headerGradient: {
-    alignItems: 'center',
-    paddingBottom: 20,
-    paddingHorizontal: 15,
-  },
+  safeArea: { flex: 1, backgroundColor: '#000' },
+  headerGradient: { alignItems: 'center', paddingBottom: 20, paddingHorizontal: 15 },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 10,
-    marginBottom: 8,
+    paddingVertical: 10,
   },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 50,
-    backgroundColor: '#00000066',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  iconCircle: { padding: 9, backgroundColor: '#222', borderRadius: 50 },
   avatar: {
     width: 110,
     height: 110,
-    borderRadius: 55,
+    borderRadius: 100,
     borderWidth: 2,
     borderColor: '#D4A84A',
-    resizeMode: 'cover',
-    marginBottom: 12,
+    marginTop: 6,
   },
-  name: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  locationText: {
-    color: '#999',
-    fontSize: 12,
-  },
-  creditsPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#b6040750',
-    borderWidth: 1,
-    borderColor: '#B60406',
-    borderRadius: 50,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  creditsText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 10,
-    marginBottom: 15,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  statLabel: {
-    color: '#999',
-    fontSize: 10,
-    marginTop: 2,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    marginBottom: 22,
-  },
+  name: { color: '#fff', fontSize: 20, fontWeight: '700', marginTop: 12 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
+  locationText: { color: '#D4A84A', fontSize: 12 },
+  actionsRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
   startBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 44,
+    paddingVertical: 12,
     borderRadius: 50,
-    marginRight: 10,
   },
-  startBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  likeBtn: {
+  startBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  blockBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 44,
+    paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 50,
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: '#E90000',
   },
-  likeBtnText: {
-    color: '#D4A84A',
-    fontSize: 12,
-    fontWeight: '700',
-  },
+  blockBtnText: { color: '#E90000', fontSize: 13, fontWeight: '700' },
   card: {
-    backgroundColor: '#111',
-    borderColor: '#333',
+    backgroundColor: '#0d0d0d',
+    borderRadius: 12,
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 15,
-    marginBottom: 18,
+    borderColor: '#222',
+    padding: 14,
+    marginTop: 18,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  cardHeaderText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  aboutText: {
-    color: '#999',
-    fontSize: 11,
-    lineHeight: 17,
-    marginBottom: 16,
-  },
-  detailsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '50%',
-    marginBottom: 14,
-  },
-  detailLabel: {
-    color: '#777',
-    fontSize: 9,
-  },
-  detailValue: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 1,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18 },
+  cardHeaderText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  aboutText: { color: '#bbb', fontSize: 12, lineHeight: 19, marginTop: 10 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: '#333',
+    backgroundColor: '#1a1a1a',
     borderRadius: 50,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    marginRight: 8,
-    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#2e2e2e',
   },
-  chipText: {
-    color: '#fff',
-    fontSize: 11,
-  },
-  photosHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  viewAllText: {
-    color: '#D4A84A',
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 10,
-  },
+  chipText: { color: '#fff', fontSize: 11 },
   photoThumb: {
-    width: 85,
-    height: 110,
-    borderRadius: 12,
+    width: 100,
+    height: 130,
+    borderRadius: 10,
     marginRight: 10,
-    resizeMode: 'cover',
+    marginTop: 12,
   },
 });

@@ -20,6 +20,7 @@ import DeleteAccount from './src/screens/DeleteAccount';
 import BlockUsersScreen from './src/screens/BlockUsersScreen';
 import FeedbackScreen from './src/screens/FeedbackScreen';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import { AuthProvider } from './src/context/AuthContext';
 
 // Created once at module scope. Building it inside the component made a brand
 // new navigator on every render.
@@ -35,6 +36,7 @@ const navTheme = {
 const App = () => {
   return (
     <ErrorBoundary>
+      <AuthProvider>
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
         <NavigationContainer theme={navTheme}>
@@ -62,6 +64,7 @@ const App = () => {
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 };

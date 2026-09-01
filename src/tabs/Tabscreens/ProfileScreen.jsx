@@ -1,41 +1,40 @@
 import {
   Image,
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import AppIcon from '../../components/AppIcon';
 import AppHeader from '../../components/AppHeader';
 import AppButton from '../../components/AppButton';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { Loading, ErrorState } from '../../components/ScreenState';
 import { useTabBarSpacer } from '../../theme/layout';
-
-// Dummy profile data — swap for real data once the API is wired up
-const dummyProfile = {
-  avatar: require('../../assets/images/overlay1.png'),
-  name: 'Ben Wayne',
-  username: '@Ben Wayne',
-  age: 28,
-  joined: 'Join 2 months ago',
-  location: 'Blue door cafe',
-  stats: [
-    { key: 'seen', icon: 'eye-outline', value: 150, label: 'Seen By' },
-    { key: 'liked', icon: 'heart', value: 190, label: 'Liked you' },
-    { key: 'matches', icon: 'sparkles-outline', value: 10, label: 'Matches' },
-  ],
-};
+import { users as usersApi } from '../../services/endpoints';
+import { useAuth } from '../../context/AuthContext';
+import { avatarSource, friendlyError } from '../../utils/format';
 
 const accountItems = [
-  // { key: 'notification', icon: 'notifications-outline', label: 'Notification', screen: 'Notifications' },
-  { key: 'privacy', icon: 'lock-closed-outline', label: 'Privacy', screen: 'SettingScreen' },
-  { key: 'visibility', icon: 'settings', label: 'Account Settings', screen: 'SettingScreen' },
+  {
+    key: 'privacy',
+    icon: 'lock-closed-outline',
+    label: 'Privacy & Settings',
+    screen: 'SettingScreen',
+  },
+  {
+    key: 'blocked',
+    icon: 'person-remove-outline',
+    label: 'Blocked Users',
+    screen: 'BlockUsers',
+  },
 ];
 
 const StatCard = ({ icon, value, label }) => (
@@ -67,62 +66,103 @@ const AccountRow = ({ icon, label, onPress, danger, isLast }) => (
 
 const ProfileScreen = ({ navigation }) => {
   const tabBarSpacer = useTabBarSpacer();
-  const [avatar, setAvatar] = useState(dummyProfile.avatar);
+  const { user, signOut, refreshUser } = useAuth();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  const [profile, setProfile] = useState(user);
 
-  const handlePickImage = () => {
-    launchImageLibrary(
-      { mediaType: 'photo', quality: 0.8 },
-      response => {
-        if (response.didCancel || response.errorCode) return;
-        const asset = response.assets && response.assets[0];
-        if (asset?.uri) {
-          setAvatar({ uri: asset.uri });
-        }
-      },
-    );
-  };
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const me = await usersApi.me();
+      setProfile(me);
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
-  const handleLogout = () => {
-    setLogoutModalVisible(true);
-  };
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
-  const confirmLogout = () => {
+  const confirmLogout = async () => {
     setLogoutModalVisible(false);
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'LoginScreen' }],
-    });
+    await signOut();
+    navigation.reset({ index: 0, routes: [{ name: 'LoginScreen' }] });
   };
+
+  if (!profile && error) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AppIcon />
+        <ErrorState message={error} onRetry={load} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <AppIcon />
+        <Loading label="Loading your profile" />
+      </SafeAreaView>
+    );
+  }
+
+  const stats = [
+    {
+      key: 'liked',
+      icon: 'heart',
+      value: profile.stats?.likedYou ?? 0,
+      label: 'Liked you',
+    },
+    {
+      key: 'matches',
+      icon: 'sparkles-outline',
+      value: profile.stats?.matches ?? 0,
+      label: 'Matches',
+    },
+    {
+      key: 'age',
+      icon: 'person-outline',
+      value: profile.age ?? '--',
+      label: 'Age',
+    },
+  ];
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}
-    >
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <AppIcon />
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ paddingBottom: tabBarSpacer }}>
-          <AppHeader
-            title="Profile"
-            // rightContent={
-            //   <TouchableOpacity
-            //     activeOpacity={0.66}
-            //     style={{ padding: 10, backgroundColor: '#333', borderRadius: 50 }}
-            //     onPress={() => navigation.navigate('SettingScreen')}
-            //   >
-            //     <Ionicons name="settings" size={20} color={'#fff'} />
-            //   </TouchableOpacity>
-            // }
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+              refreshUser().catch(() => {});
+            }}
+            tintColor="#D4A84A"
+            colors={['#D4A84A']}
           />
+        }
+      >
+        <View style={{ paddingBottom: tabBarSpacer }}>
+          <AppHeader title="Profile" />
 
-          {/* Profile header */}
           <View style={styles.profileBlock}>
             <View style={styles.avatarWrapper}>
-              <Image source={avatar} style={styles.avatar} />
+              <Image source={avatarSource(profile.photoUrl)} style={styles.avatar} />
               <TouchableOpacity
                 activeOpacity={0.8}
                 style={styles.cameraBtn}
-                onPress={handlePickImage}
+                onPress={() => navigation.navigate('EditProfile')}
               >
                 <Ionicons name="camera" size={12} color="#fff" />
               </TouchableOpacity>
@@ -130,7 +170,9 @@ const ProfileScreen = ({ navigation }) => {
 
             <View style={{ flex: 1, marginLeft: 15 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={styles.name}>{dummyProfile.name}</Text>
+                <Text style={styles.name} numberOfLines={1}>
+                  {profile.name}
+                </Text>
                 <Ionicons
                   name="sparkles-outline"
                   size={14}
@@ -140,42 +182,40 @@ const ProfileScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.metaRow}>
-                <Text style={styles.metaText}>{dummyProfile.username}</Text>
-                <View style={styles.metaDivider} />
-                <Ionicons name="person-outline" size={11} color="#ccc" />
-                <Text style={styles.metaText}> {dummyProfile.age} years</Text>
+                <Ionicons name="mail-outline" size={11} color="#ccc" />
+                <Text style={styles.metaText} numberOfLines={1}>
+                  {' '}
+                  {profile.email}
+                </Text>
               </View>
 
-              <View style={styles.metaRow}>
-                <Ionicons name="time-outline" size={11} color="#ccc" />
-                <Text style={styles.metaText}> {dummyProfile.joined}</Text>
-                <View style={styles.metaDivider} />
-                <Ionicons name="location-outline" size={11} color="#ccc" />
-                <Text style={styles.metaText}> {dummyProfile.location}</Text>
-              </View>
+              {profile.city ? (
+                <View style={styles.metaRow}>
+                  <Ionicons name="location-outline" size={11} color="#ccc" />
+                  <Text style={styles.metaText}> {profile.city}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
 
-          {/* Edit profile — swap props to match your real AppButton API */}
           <AppButton
             title="Edit Profile"
-            icon="pencil-outline"
             height={40}
             gradientColors={['#A26B20', '#FFCC74', '#A26B20']}
-            textColor='#000'
+            textColor="#000"
             borderWidth={0}
             leftIcon="pencil-outline"
             onPress={() => navigation.navigate('EditProfile')}
           />
 
-          {/* Stats */}
           <View style={styles.statsRow}>
-            {dummyProfile.stats.map(s => (
+            {stats.map(s => (
               <StatCard key={s.key} icon={s.icon} value={s.value} label={s.label} />
             ))}
           </View>
 
-          {/* Account */}
+          {error ? <Text style={styles.errorLine}>{error}</Text> : null}
+
           <Text style={styles.sectionTitle}>Account</Text>
           <View style={styles.card}>
             {accountItems.map((item, index) => (
@@ -189,10 +229,14 @@ const ProfileScreen = ({ navigation }) => {
             ))}
           </View>
 
-          {/* Account Actions */}
           <Text style={styles.sectionTitle}>Account Actions</Text>
           <View style={styles.card}>
-            <AccountRow icon="refresh-outline" label="Logout" isLast onPress={handleLogout} />
+            <AccountRow
+              icon="refresh-outline"
+              label="Logout"
+              isLast
+              onPress={() => setLogoutModalVisible(true)}
+            />
           </View>
 
           <View style={[styles.card, { marginTop: 12 }]}>
@@ -244,17 +288,14 @@ const ProfileScreen = ({ navigation }) => {
 export default ProfileScreen;
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#000', paddingHorizontal: 15 },
   profileBlock: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 15,
     marginBottom: 20,
   },
-  avatarWrapper: {
-    width: 70,
-    height: 70,
-    position: 'relative',
-  },
+  avatarWrapper: { width: 70, height: 70, position: 'relative' },
   avatar: {
     width: '100%',
     height: '100%',
@@ -265,157 +306,89 @@ const styles = StyleSheet.create({
   },
   cameraBtn: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#333',
-    borderWidth: 2,
-    borderColor: '#000',
-    alignItems: 'center',
-    justifyContent: 'center',
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#B60406',
+    padding: 5,
+    borderRadius: 50,
   },
-  name: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  metaText: {
-    color: '#ccc',
-    fontSize: 11,
-  },
-  metaDivider: {
-    width: 1,
-    height: 10,
-    backgroundColor: '#777',
-    marginHorizontal: 8,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 15,
-    marginBottom: 20,
-  },
+  name: { color: '#fff', fontSize: 17, fontWeight: '700', flexShrink: 1 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
+  metaText: { color: '#ccc', fontSize: 11, flexShrink: 1 },
+  statsRow: { flexDirection: 'row', gap: 10, marginTop: 20 },
   statCard: {
     flex: 1,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#4A0000',
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    paddingVertical: 12,
-    marginHorizontal: 4,
   },
-  statValue: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  statLabel: {
-    color: '#FFFFFFAA',
-    fontSize: 9,
-    marginTop: 2,
+  statValue: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  statLabel: { color: '#ffffffcc', fontSize: 10, marginTop: 2 },
+  errorLine: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    marginTop: 12,
+    textAlign: 'center',
   },
   sectionTitle: {
     color: '#fff',
     fontSize: 15,
     fontWeight: '700',
+    marginTop: 22,
     marginBottom: 10,
   },
   card: {
-    backgroundColor: '#111',
-    borderColor: '#444',
+    backgroundColor: '#0d0d0d',
+    borderRadius: 12,
     borderWidth: 1,
-    borderRadius: 10,
-    marginBottom: 15,
-    overflow: 'hidden',
+    borderColor: '#222',
+    paddingHorizontal: 12,
   },
-  accountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-  },
-  accountRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#222',
-  },
+  accountRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13 },
+  accountRowBorder: { borderBottomWidth: 1, borderBottomColor: '#1e1e1e' },
   rowIconCircle: {
-    width: 35,
-    height: 35,
+    width: 30,
+    height: 30,
     borderRadius: 50,
-    backgroundColor: '#222',
+    backgroundColor: '#242424',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  rowIconCircleDanger: {
-    backgroundColor: '#3A0000',
-  },
-  rowLabel: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  rowLabelDanger: {
-    color: '#FF3B30',
-  },
+  rowIconCircleDanger: { backgroundColor: '#2a0d0d' },
+  rowLabel: { flex: 1, color: '#fff', fontSize: 13 },
+  rowLabelDanger: { color: '#FF3B30' },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
+    backgroundColor: '#000000bb',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    justifyContent: 'center',
+    paddingHorizontal: 30,
   },
   confirmModal: {
-    width: '80%',
-    backgroundColor: '#111111de',
-    borderRadius: 10,
-    paddingVertical: 25,
-    paddingHorizontal: 18,
+    width: '100%',
+    backgroundColor: '#111',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#444444de',
+    borderColor: '#333',
+    padding: 20,
   },
   modalTitle: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 18,
-    lineHeight: 22,
   },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
+  modalActions: { flexDirection: 'row', gap: 12, marginTop: 18 },
   modalButton: {
     flex: 1,
-    borderRadius: 7,
     paddingVertical: 10,
+    borderRadius: 50,
     alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
   },
-  noButton: {
-    backgroundColor: '#D4A84A',
-  },
-  noButtonText: {
-    color: '#000',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  yesButton: {
-    backgroundColor: '#B60406',
-  },
-  yesButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  noButton: { borderColor: '#555' },
+  noButtonText: { color: '#ccc', fontWeight: '700', fontSize: 13 },
+  yesButton: { borderColor: '#B60406', backgroundColor: '#B60406' },
+  yesButtonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 });

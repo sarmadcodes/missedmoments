@@ -12,6 +12,10 @@ import AppHeader from '../components/AppHeader';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import AppButton from '../components/AppButton';
+import { Alert } from 'react-native';
+import { users as usersApi } from '../services/endpoints';
+import { useAuth } from '../context/AuthContext';
+import { friendlyError } from '../utils/format';
 
 const consequences = [
   'Your profile and photos will be permanently removed',
@@ -60,25 +64,65 @@ const AlternativeRow = ({ icon, title, subtitle, onPress }) => (
 );
 
 const DeleteAccountScreen = ({ navigation }) => {
+  const { signOut } = useAuth();
+
+  const toLogin = () =>
+    navigation.reset({ index: 0, routes: [{ name: 'LoginScreen' }] });
+
   const handleTakeABreak = () => {
-    // Wire up to a "deactivate" API call once it exists
-    console.log('Take a break pressed');
+    Alert.alert(
+      'Take a break?',
+      'Your profile is hidden and you stop appearing in Discover. Signing back in reactivates it.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Deactivate',
+          onPress: async () => {
+            try {
+              await usersApi.deactivate();
+              await signOut();
+              toLogin();
+            } catch (err) {
+              Alert.alert('Could not deactivate', friendlyError(err));
+            }
+          },
+        },
+      ],
+    );
   };
 
-  const handleDownloadData = () => {
-    // Wire up to a data-export API call once it exists
-    console.log('Download data pressed');
-  };
+  const handleDownloadData = () =>
+    Alert.alert(
+      'Download your data',
+      'Data export is not available yet. Contact support and we will send you a copy.',
+    );
 
   const handleFeedback = () => {
     navigation.navigate('Feedback');
   };
 
+  // Irreversible, so it is gated behind an explicit confirmation.
   const handleDeleteAccount = () => {
-    // Hook this up to a confirmation dialog + delete API call
-    // once that flow is defined — left as a direct action for now
-    // since no confirmation step was specified.
-    console.log('Delete account pressed');
+    Alert.alert(
+      'Delete your account?',
+      'This cannot be undone. Your profile, photos, matches and messages will be removed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete permanently',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await usersApi.remove();
+              await signOut();
+              toLogin();
+            } catch (err) {
+              Alert.alert('Could not delete account', friendlyError(err));
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (

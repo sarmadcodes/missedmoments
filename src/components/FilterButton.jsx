@@ -3,17 +3,21 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 const GAP = 6;
 
-const FilterButton = ({ items }) => {
-  
-
-  const [selectedId, setSelectedId] = useState(null);
+/**
+ * Works uncontrolled (own state) or controlled by passing selectedId+onSelect,
+ * so a screen can drive the filter without duplicating the selection state.
+ */
+const FilterButton = ({ items, selectedId: controlledId, onSelect }) => {
+  const [internalId, setInternalId] = useState(null);
+  const isControlled = controlledId !== undefined;
+  const selectedId = isControlled ? controlledId : internalId;
 
   const selectFilter = (id) => {
-    if (selectedId === id) {
-      setSelectedId(null);
-    } else {
-      setSelectedId(id);
+    const next = selectedId === id && !isControlled ? null : id;
+    if (!isControlled) {
+      setInternalId(next);
     }
+    onSelect?.(next);
   };
 
   const colors = {

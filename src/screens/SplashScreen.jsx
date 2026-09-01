@@ -1,14 +1,23 @@
 import React, { useEffect } from 'react';
 import { View, Image, ImageBackground, StyleSheet } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
 const SplashScreen = ({ navigation }) => {
+  const { bootstrapping, user } = useAuth();
+
   useEffect(() => {
+    // Wait until we know whether the stored session is still good, so a
+    // signed-in user is never bounced to the login screen.
+    if (bootstrapping) {
+      return;
+    }
+
     const timer = setTimeout(() => {
-      navigation.replace('WelcomeScreen'); // Replace with your screen name
-    }, 3000);
+      navigation.replace(user ? 'BottomNavigation' : 'WelcomeScreen');
+    }, 1200);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [bootstrapping, user, navigation]);
 
   return (
     <ImageBackground
@@ -16,7 +25,6 @@ const SplashScreen = ({ navigation }) => {
       style={styles.background}
       resizeMode="cover"
     >
-      {/* Center Logo */}
       <View style={styles.overlay}>
         <Image
           source={require('../assets/images/applogo.png')}
@@ -25,7 +33,6 @@ const SplashScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Bottom Fixed Image */}
       <Image
         source={require('../assets/images/goldheart.png')}
         style={styles.bottomImage}
@@ -38,22 +45,9 @@ const SplashScreen = ({ navigation }) => {
 export default SplashScreen;
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  logo: {
-    width: 190,
-    height: 190,
-  },
-
+  background: { flex: 1, backgroundColor: '#000' },
+  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  logo: { width: 190, height: 190 },
   bottomImage: {
     position: 'absolute',
     bottom: 25,

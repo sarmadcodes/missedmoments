@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +17,8 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import AppHeader from '../components/AppHeader';
 import AppIcon from '../components/AppIcon';
 import AppButton from '../components/AppButton';
+import { auth as authApi } from '../services/endpoints';
+import { friendlyError } from '../utils/format';
 
 const ChangePasswordScreen = ({ navigation }) => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -25,8 +28,38 @@ const ChangePasswordScreen = ({ navigation }) => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleUpdatePassword = () => {
-    navigation.navigate('SettingScreen');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleUpdatePassword = async () => {
+    setError(null);
+
+    if (!currentPassword) return setError('Enter your current password.');
+    if (newPassword.length < 8)
+      return setError('New password must be at least 8 characters.');
+    if (newPassword !== confirmPassword)
+      return setError('New passwords do not match.');
+
+    setSubmitting(true);
+    try {
+      await authApi.changePassword(currentPassword, newPassword);
+      // Changing the password revokes every session, so send them to sign in.
+      Alert.alert(
+        'Password updated',
+        'You have been signed out everywhere. Please sign in again.',
+        [
+          {
+            text: 'OK',
+            onPress: () =>
+              navigation.reset({ index: 0, routes: [{ name: 'LoginScreen' }] }),
+          },
+        ],
+      );
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const renderField = (

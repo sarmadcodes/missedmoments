@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -13,44 +13,61 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import AppIcon from '../components/AppIcon';
 import AppHeader from '../components/AppHeader';
 import { MAX_FONT_SCALE } from '../theme/typography';
-
-// Placeholder list — replace with GET /users/blocked once the API is wired.
-const initialBlocked = [
-  {
-    id: '1',
-    name: 'Marcus',
-    image: require('../assets/images/overlay2.png'),
-    blockedAt: 'Blocked 3 days ago',
-  },
-  {
-    id: '2',
-    name: 'Daniel',
-    image: require('../assets/images/overlay4.png'),
-    blockedAt: 'Blocked 2 weeks ago',
-  },
-];
+import { useFocusEffect } from '@react-navigation/native';
+import { safety as safetyApi } from '../services/endpoints';
+import { Loading, ErrorState } from '../components/ScreenState';
+import { avatarSource, friendlyError } from '../utils/format';
 
 const BlockUsersScreen = ({ navigation }) => {
-  const [blocked, setBlocked] = useState(initialBlocked);
+  const [blocked, setBlocked] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleUnblock = id =>
-    setBlocked(prev => prev.filter(item => item.id !== id));
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const result = await safetyApi.blocks();
+      setBlocked(result.blocked ?? []);
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  const handleUnblock = async userId => {
+    // Optimistic: drop the row, restore it if the call fails.
+    const previous = blocked;
+    setBlocked(prev => prev.filter(item => item.userId !== userId));
+    try {
+      await safetyApi.unblock(userId);
+    } catch (err) {
+      setBlocked(previous);
+      setError(friendlyError(err));
+    }
+  };
 
   const renderItem = ({ item }) => (
     <View style={styles.row}>
-      <Image source={item.image} style={styles.avatar} />
+      <Image source={avatarSource(item.photoUrl)} style={styles.avatar} />
       <View style={{ flex: 1, marginLeft: 12 }}>
         <Text style={styles.name} maxFontSizeMultiplier={MAX_FONT_SCALE}>
           {item.name}
         </Text>
         <Text style={styles.meta} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-          {item.blockedAt}
+          Blocked
         </Text>
       </View>
       <TouchableOpacity
         activeOpacity={0.75}
         style={styles.unblockBtn}
-        onPress={() => handleUnblock(item.id)}
+        onPress={() => handleUnblock(item.userId)}
       >
         <Text style={styles.unblockText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
           Unblock
@@ -78,13 +95,18 @@ const BlockUsersScreen = ({ navigation }) => {
 
       <FlatList
         data={blocked}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.userId}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={
           blocked.length ? styles.listContent : styles.emptyContent
         }
         ListEmptyComponent={
+          loading ? (
+            <Loading label="Loading blocked users" />
+          ) : error ? (
+            <ErrorState message={error} onRetry={load} />
+          ) : (
           <View style={styles.emptyState}>
             <Ionicons name="shield-checkmark-outline" size={30} color="#D4A84A" />
             <Text style={styles.emptyTitle}>No blocked users</Text>
@@ -92,6 +114,7 @@ const BlockUsersScreen = ({ navigation }) => {
               Anyone you block will show up here.
             </Text>
           </View>
+          )
         }
       />
     </SafeAreaView>

@@ -9,6 +9,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -16,6 +17,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 
 import AppButton from '../components/AppButton';
 import AppIcon from '../components/AppIcon';
+import { useAuth } from '../context/AuthContext';
 
 const interestOptions = [
   { id: 'music', name: 'Music', icon: 'musical-notes-outline' },
@@ -30,8 +32,12 @@ const interestOptions = [
 ];
 
 const RegisterScreen = ({ navigation }) => {
+  const { signUp } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('');
   const [number, setNumber] = useState('');
@@ -85,11 +91,71 @@ const RegisterScreen = ({ navigation }) => {
     });
   };
 
-  const handleContinue = () => {
-    if (currentStep < 2) {
-      setCurrentStep(prev => prev + 1);
-    } else {
-      navigation.navigate('BottomNavigation');
+  // Step 0 is the only step the API strictly needs, so it is validated before
+  // the user is allowed to move on rather than failing at the very end.
+  const validateStepZero = () => {
+    if (!name.trim()) return 'Enter your name.';
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()))
+      return 'Enter a valid email address.';
+    const parsedAge = Number(age);
+    if (!age || Number.isNaN(parsedAge)) return 'Enter your age.';
+    if (parsedAge < 18) return 'You must be 18 or older to use MissedMoments.';
+    if (parsedAge > 120) return 'Enter a valid age.';
+    if (password.length < 8) return 'Password must be at least 8 characters.';
+    if (password !== confirmPassword) return 'Passwords do not match.';
+    return null;
+  };
+
+  const handleContinue = async () => {
+    setError(null);
+
+    if (currentStep === 0) {
+      const problem = validateStepZero();
+      if (problem) {
+        setError(problem);
+        return;
+      }
+      setCurrentStep(1);
+      return;
+    }
+
+    if (currentStep === 1) {
+      setCurrentStep(2);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // The form collects an age; the API stores a birth date so it cannot go
+      // stale. Approximating to Jan 1 is enough for an age gate.
+      const birthYear = new Date().getFullYear() - Number(age);
+
+      await signUp({
+        email: email.trim(),
+        password,
+        name: name.trim(),
+        birthDate: `${birthYear}-01-01`,
+        gender: gender.trim() || undefined,
+        city: city.trim() || undefined,
+        phone: number.trim() || undefined,
+        bio: description.trim() || undefined,
+        interests: selectedInterests,
+      });
+
+      if (profilePhoto || momentPhotos.some(Boolean)) {
+        Alert.alert(
+          'Account created',
+          'Photo upload is not connected yet, so your photos were not saved. Everything else is set up.',
+        );
+      }
+
+      navigation.reset({ index: 0, routes: [{ name: 'BottomNavigation' }] });
+    } catch (err) {
+      setError(err?.message || 'Could not create your account. Please try again.');
+      // Send them back to the step that owns the fields the API rejected.
+      setCurrentStep(0);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -156,6 +222,11 @@ const RegisterScreen = ({ navigation }) => {
           <View style={styles.form}>
             {renderInput('Enter Name', name, setName, 'Full Name', {
               icon: 'person-outline',
+            })}
+
+            {renderInput('Email', email, setEmail, 'username@example.com', {
+              icon: 'mail-outline',
+              keyboardType: 'email-address',
             })}
 
             <View style={styles.row}>
@@ -322,11 +393,16 @@ const RegisterScreen = ({ navigation }) => {
         )}
 
         <View style={styles.buttonWrapper}>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
           <AppButton
             title={currentStep < 2 ? 'Continue' : 'Finish'}
             width="100%"
+            loading={submitting}
             onPress={handleContinue}
-            disabled={currentStep === 2 && selectedInterests.length < 5}
+            disabled={
+              submitting || (currentStep === 2 && selectedInterests.length < 5)
+            }
           />
         </View>
         {/* Footer */}
@@ -349,6 +425,12 @@ const RegisterScreen = ({ navigation }) => {
 export default RegisterScreen;
 
 const styles = StyleSheet.create({
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#000',

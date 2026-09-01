@@ -6,160 +6,29 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import AppIcon from '../../components/AppIcon';
 import AppHeader from '../../components/AppHeader';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import SwipeCard, { useCardMetrics } from '../../components/cards/SwipeCard';
+import { Loading, ErrorState, EmptyState } from '../../components/ScreenState';
 import { useTabBarSpacer } from '../../theme/layout';
+import { moments as momentsApi, likes as likesApi } from '../../services/endpoints';
+import { avatarSource, friendlyError } from '../../utils/format';
 
 const SWIPE_OUT_DURATION = 250;
 
 const MatchesScreen = ({ navigation }) => {
-  const people = [
-    {
-      id: '1',
-      image: require('../../assets/images/overlay1.png'),
-      name: 'Elizabeth',
-      age: 28,
-      location: 'Blue Door Cafe',
-      interests: ['Music', 'Travel', 'Books'],
-      likes: 132,
-    },
-    {
-      id: '2',
-      image: require('../../assets/images/overlay2.png'),
-      name: 'Marcus',
-      age: 21,
-      location: 'Roundhouse',
-      interests: ['Fitness', 'Art', 'Cocktails'],
-      likes: 94,
-    },
-    {
-      id: '3',
-      image: require('../../assets/images/overlay3.png'),
-      name: 'Emily',
-      age: 20,
-      location: 'Downtown',
-      interests: ['Food', 'Dance', 'Film'],
-      likes: 88,
-    },
-    {
-      id: '4',
-      image: require('../../assets/images/overlay4.png'),
-      name: 'Sarah',
-      age: 24,
-      location: 'Rooftop Lounge',
-      interests: ['Photography', 'Travel'],
-      likes: 118,
-    },
-    {
-      id: '5',
-      image: require('../../assets/images/overlay1.png'),
-      name: 'John',
-      age: 33,
-      location: 'King’s Cross',
-      interests: ['Football', 'Coffee', 'Music'],
-      likes: 140,
-    },
-    {
-      id: '6',
-      image: require('../../assets/images/overlay2.png'),
-      name: 'David',
-      age: 29,
-      location: 'Metro Station',
-      interests: ['Gaming', 'Movies', 'Road Trips'],
-      likes: 105,
-    },
-    {
-      id: '7',
-      image: require('../../assets/images/overlay3.png'),
-      name: 'Sophia',
-      age: 23,
-      location: 'West End',
-      interests: ['Fashion', 'Art', 'Sunsets'],
-      likes: 116,
-    },
-    {
-      id: '8',
-      image: require('../../assets/images/overlay4.png'),
-      name: 'Alex',
-      age: 27,
-      location: 'City Library',
-      interests: ['Running', 'Books', 'Music'],
-      likes: 97,
-    },
-    {
-      id: '9',
-      image: require('../../assets/images/overlay1.png'),
-      name: 'Jessica',
-      age: 22,
-      location: 'Baker Street',
-      interests: ['Food', 'Travel', 'Movies'],
-      likes: 109,
-    },
-    {
-      id: '10',
-      image: require('../../assets/images/overlay2.png'),
-      name: 'Michael',
-      age: 31,
-      location: 'Harbor Point',
-      interests: ['Podcasts', 'Cycling', 'Coffee'],
-      likes: 123,
-    },
-    {
-      id: '11',
-      image: require('../../assets/images/overlay3.png'),
-      name: 'Olivia',
-      age: 25,
-      location: 'North Avenue',
-      interests: ['Dancing', 'Travel', 'Design'],
-      likes: 111,
-    },
-    {
-      id: '12',
-      image: require('../../assets/images/overlay4.png'),
-      name: 'Daniel',
-      age: 30,
-      location: 'Bayside',
-      interests: ['Golf', 'Wine', 'Food'],
-      likes: 96,
-    },
-    {
-      id: '13',
-      image: require('../../assets/images/overlay1.png'),
-      name: 'Chloe',
-      age: 19,
-      location: 'Garden Lane',
-      interests: ['Skincare', 'Art', 'Cafe Hopping'],
-      likes: 89,
-    },
-    {
-      id: '14',
-      image: require('../../assets/images/overlay2.png'),
-      name: 'James',
-      age: 32,
-      location: 'Old Town',
-      interests: ['Photography', 'Hiking'],
-      likes: 121,
-    },
-    {
-      id: '15',
-      image: require('../../assets/images/overlay3.png'),
-      name: 'Hannah',
-      age: 24,
-      location: 'River Walk',
-      interests: ['Yoga', 'Music', 'Brunch'],
-      likes: 99,
-    },
-  ];
-
+  const [people, setPeople] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [likedPeople, setLikedPeople] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [toastLabel, setToastLabel] = useState(null);
+
   const position = useRef(new Animated.ValueXY()).current;
   const toastOpacity = useRef(new Animated.Value(0)).current;
-  const [toastLabel, setToastLabel] = useState(null);
 
   // The PanResponder below is built once and never rebuilt, so every value it
   // reaches through closure is frozen at the first render. Reading the index
@@ -167,8 +36,7 @@ const MatchesScreen = ({ navigation }) => {
   // top of the deck instead of always on person #1.
   const currentIndexRef = useRef(0);
 
-  const { screenWidth, cardWidth, cardHeight, swipeThreshold } =
-    useCardMetrics();
+  const { screenWidth, cardWidth, cardHeight, swipeThreshold } = useCardMetrics();
   const tabBarSpacer = useTabBarSpacer();
 
   // Same reason as currentIndexRef: the frozen gesture handlers need the
@@ -176,43 +44,54 @@ const MatchesScreen = ({ navigation }) => {
   const metricsRef = useRef({ screenWidth, swipeThreshold });
   metricsRef.current = { screenWidth, swipeThreshold };
 
-  // Same again for the deck itself, so this keeps working once `people` comes
-  // from the API instead of a static array.
+  // ...and the same for the deck, which now arrives from the API.
   const peopleRef = useRef(people);
   peopleRef.current = people;
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      // A wider window than Discover so the deck does not run dry.
+      const result = await momentsApi.nearby('week');
+      setPeople(result.people ?? []);
+      setCurrentIndex(0);
+      currentIndexRef.current = 0;
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   useEffect(() => {
     currentIndexRef.current = currentIndex;
     position.setValue({ x: 0, y: 0 });
-  }, [currentIndex]);
+  }, [currentIndex, position]);
 
   const showToast = label => {
     setToastLabel(label);
     Animated.sequence([
-      Animated.timing(toastOpacity, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
+      Animated.timing(toastOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
       Animated.delay(700),
-      Animated.timing(toastOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => setToastLabel(null));
   };
 
-  // Placeholder only — swap for a real API call once the backend
-  // for storing liked profiles is ready. For now this just keeps
-  // liked people in local state for this screen.
-  const handleLikePerson = person => {
-    setLikedPeople(prev => [...prev, person]);
-    console.log('Liked (pending backend integration):', person.name);
-  };
-
-  const handlePassPerson = person => {
-    console.log('Passed:', person.name);
+  const act = async (person, action) => {
+    try {
+      const result = await likesApi.act(person.userId, action);
+      showToast(result?.matched ? 'match' : action);
+    } catch (err) {
+      // The card has already animated away; surface it without blocking.
+      showToast('error');
+      console.warn('like failed:', friendlyError(err));
+    }
   };
 
   const panResponder = useRef(
@@ -239,11 +118,7 @@ const MatchesScreen = ({ navigation }) => {
   const forceSwipe = direction => {
     const { screenWidth: width } = metricsRef.current;
     const x =
-      direction === 'right'
-        ? width * 1.5
-        : direction === 'left'
-        ? -width * 1.5
-        : 0;
+      direction === 'right' ? width * 1.5 : direction === 'left' ? -width * 1.5 : 0;
     const y = direction === 'up' ? -width * 1.5 : 0;
     Animated.timing(position, {
       toValue: { x, y },
@@ -260,24 +135,15 @@ const MatchesScreen = ({ navigation }) => {
     // Keep the ref in step immediately; the effect above only runs after the
     // next render, and a fast second gesture can land before that.
     currentIndexRef.current += 1;
+
     if (direction === 'right') {
-      handleLikePerson(person);
-      showToast('like');
+      act(person, 'like');
     } else if (direction === 'left') {
-      handlePassPerson(person);
-      showToast('pass');
+      act(person, 'pass');
     } else if (direction === 'up') {
-      navigation.navigate('PersonProfile', {
-        person: {
-          image: person.image,
-          name: person.name,
-          age: person.age,
-          location: person.location,
-          interests: person.interests,
-          likes: person.likes,
-        },
-      });
+      navigation.navigate('PersonProfile', { userId: person.userId });
     }
+
     setCurrentIndex(prev => prev + 1);
   };
 
@@ -293,10 +159,7 @@ const MatchesScreen = ({ navigation }) => {
       inputRange: [-screenWidth * 1.5, 0, screenWidth * 1.5],
       outputRange: ['-18deg', '0deg', '18deg'],
     });
-    return {
-      ...position.getLayout(),
-      transform: [{ rotate }],
-    };
+    return { ...position.getLayout(), transform: [{ rotate }] };
   };
 
   const likeOpacity = position.x.interpolate({
@@ -310,16 +173,36 @@ const MatchesScreen = ({ navigation }) => {
     extrapolate: 'clamp',
   });
 
+  // The API's nearby shape mapped onto what SwipeCard expects.
+  const toCardPerson = person => ({
+    image: avatarSource(person.photoUrl),
+    name: person.name,
+    age: person.age,
+    location: person.placeName || `${person.distanceMetres}m away`,
+    interests: [],
+    likes: person.matchPercentage,
+  });
+
   const renderCards = () => {
+    if (loading) return <Loading label="Building your deck" />;
+    if (error) {
+      return (
+        <ErrorState
+          message={error}
+          onRetry={() => {
+            setLoading(true);
+            load();
+          }}
+        />
+      );
+    }
+
     if (currentIndex >= people.length) {
       return (
-        <View style={styles.emptyState}>
-          <Ionicons name="sparkles-outline" size={32} color="#D4A84A" />
-          <Text style={styles.emptyTitle}>You're all caught up</Text>
-          <Text style={styles.emptySubtitle}>
-            No more profiles nearby — check back soon.
-          </Text>
-        </View>
+        <EmptyState
+          title="You're all caught up"
+          text="No more profiles nearby — check back after your next moment."
+        />
       );
     }
 
@@ -330,7 +213,7 @@ const MatchesScreen = ({ navigation }) => {
         if (index === currentIndex) {
           return (
             <Animated.View
-              key={person.id}
+              key={person.userId}
               style={[
                 styles.cardWrapper,
                 { width: cardWidth, height: cardHeight },
@@ -339,36 +222,19 @@ const MatchesScreen = ({ navigation }) => {
               {...panResponder.panHandlers}
             >
               <SwipeCard
-                person={person}
+                person={toCardPerson(person)}
                 onPress={() =>
-                  navigation.navigate('PersonProfile', {
-                    person: {
-                      image: person.image,
-                      name: person.name,
-                      age: person.age,
-                      location: person.location,
-                      interests: person.interests,
-                      likes: person.likes,
-                    },
-                  })
+                  navigation.navigate('PersonProfile', { userId: person.userId })
                 }
               />
 
               <Animated.View
-                style={[
-                  styles.stamp,
-                  styles.likeStamp,
-                  { opacity: likeOpacity },
-                ]}
+                style={[styles.stamp, styles.likeStamp, { opacity: likeOpacity }]}
               >
                 <Text style={styles.likeStampText}>LIKE</Text>
               </Animated.View>
               <Animated.View
-                style={[
-                  styles.stamp,
-                  styles.nopeStamp,
-                  { opacity: nopeOpacity },
-                ]}
+                style={[styles.stamp, styles.nopeStamp, { opacity: nopeOpacity }]}
               >
                 <Text style={styles.nopeStampText}>PASS</Text>
               </Animated.View>
@@ -379,7 +245,7 @@ const MatchesScreen = ({ navigation }) => {
         const depth = index - currentIndex;
         return (
           <Animated.View
-            key={person.id}
+            key={person.userId}
             style={[
               styles.cardWrapper,
               styles.stackedCard,
@@ -387,23 +253,24 @@ const MatchesScreen = ({ navigation }) => {
               { top: 8 * depth, transform: [{ scale: 1 - 0.04 * depth }] },
             ]}
           >
-            <SwipeCard person={person} />
+            <SwipeCard person={toCardPerson(person)} />
           </Animated.View>
         );
       })
       .reverse(); // current card renders last so it sits visually on top
   };
 
+  const hasDeck = !loading && !error && currentIndex < people.length;
+  const isNegative = toastLabel === 'pass' || toastLabel === 'error';
+
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}
-    >
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <AppIcon />
       <AppHeader title="Matches" />
 
       <View style={styles.deckArea}>{renderCards()}</View>
 
-      {currentIndex < people.length && (
+      {hasDeck && (
         <View style={[styles.actionsRow, { marginBottom: tabBarSpacer }]}>
           <TouchableOpacity
             activeOpacity={0.8}
@@ -427,17 +294,31 @@ const MatchesScreen = ({ navigation }) => {
         <Animated.View
           style={[
             styles.toast,
-            toastLabel === 'like' ? styles.toastLike : styles.toastPass,
+            isNegative ? styles.toastPass : styles.toastLike,
             { opacity: toastOpacity, bottom: tabBarSpacer + 60 },
           ]}
         >
           <Ionicons
-            name={toastLabel === 'like' ? 'heart' : 'close-circle'}
+            name={
+              toastLabel === 'match'
+                ? 'sparkles'
+                : toastLabel === 'like'
+                ? 'heart'
+                : toastLabel === 'error'
+                ? 'alert-circle'
+                : 'close-circle'
+            }
             size={16}
-            color={toastLabel === 'like' ? '#D4A84A' : '#E90000'}
+            color={isNegative ? '#E90000' : '#D4A84A'}
           />
           <Text style={styles.toastText}>
-            {toastLabel === 'like' ? '  Liked' : '  Passed'}
+            {toastLabel === 'match'
+              ? "  It's a match!"
+              : toastLabel === 'like'
+              ? '  Liked'
+              : toastLabel === 'error'
+              ? "  Couldn't save that"
+              : '  Passed'}
           </Text>
         </Animated.View>
       )}
@@ -448,17 +329,10 @@ const MatchesScreen = ({ navigation }) => {
 export default MatchesScreen;
 
 const styles = StyleSheet.create({
-  deckArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardWrapper: {
-    position: 'absolute',
-  },
-  stackedCard: {
-    zIndex: -1,
-  },
+  safeArea: { flex: 1, backgroundColor: '#000', paddingHorizontal: 15 },
+  deckArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  cardWrapper: { position: 'absolute' },
+  stackedCard: { zIndex: -1 },
   stamp: {
     position: 'absolute',
     top: 40,
@@ -467,22 +341,14 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderRadius: 8,
   },
-  likeStamp: {
-    left: 24,
-    borderColor: '#D4A84A',
-    transform: [{ rotate: '-20deg' }],
-  },
+  likeStamp: { left: 24, borderColor: '#D4A84A', transform: [{ rotate: '-20deg' }] },
   likeStampText: {
     color: '#D4A84A',
     fontSize: 20,
     fontWeight: '800',
     letterSpacing: 2,
   },
-  nopeStamp: {
-    right: 24,
-    borderColor: '#E90000',
-    transform: [{ rotate: '20deg' }],
-  },
+  nopeStamp: { right: 24, borderColor: '#E90000', transform: [{ rotate: '20deg' }] },
   nopeStampText: {
     color: '#E90000',
     fontSize: 20,
@@ -501,32 +367,11 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-
     backgroundColor: '#111',
     borderWidth: 1.5,
   },
-  passBtn: {
-    borderColor: '#E90000',
-  },
-  likeBtn: {
-    borderColor: '#D4A84A',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingHorizontal: 30,
-  },
-  emptyTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 10,
-  },
-  emptySubtitle: {
-    color: '#999',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 6,
-  },
+  passBtn: { borderColor: '#E90000' },
+  likeBtn: { borderColor: '#D4A84A' },
   toast: {
     position: 'absolute',
     alignSelf: 'center',
@@ -538,15 +383,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 50,
   },
-  toastLike: {
-    borderColor: '#D4A84A',
-  },
-  toastPass: {
-    borderColor: '#E90000',
-  },
-  toastText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
+  toastLike: { borderColor: '#D4A84A' },
+  toastPass: { borderColor: '#E90000' },
+  toastText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 });

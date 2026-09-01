@@ -8,7 +8,11 @@ import { Platform } from 'react-native';
  * dev script sets up). Point API_BASE_URL at your deployed API for release.
  */
 const DEV_HOST = Platform.select({
-  android: 'http://10.0.2.2:4100',
+  // A USB-connected phone reaches the laptop through an adb reverse tunnel,
+  // so localhost is correct there. 10.0.2.2 is the emulator-only alias for
+  // the host machine and does NOT work on a real device.
+  //   adb reverse tcp:4100 tcp:4100
+  android: 'http://localhost:4100',
   ios: 'http://localhost:4100',
   default: 'http://localhost:4100',
 });

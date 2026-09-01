@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -11,6 +11,10 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import AppIcon from '../components/AppIcon';
 import AppHeader from '../components/AppHeader';
 import FilterButton from '../components/FilterButton';
+import { useFocusEffect } from '@react-navigation/native';
+import { notifications as notificationsApi } from '../services/endpoints';
+import { Loading, ErrorState, EmptyState } from '../components/ScreenState';
+import { avatarSource, timeAgo, friendlyError } from '../utils/format';
 
 /* =========================================================
    NOTIFICATION CARD
@@ -47,42 +51,53 @@ const NotificationCard = ({
 ========================================================= */
 
 const NotificationScreen = () => {
-  const yesterdayNotifications = [
-    {
-      id: 1,
-      image: require('../assets/images/overlay1.png'),
-      message: 'Ava Willams post for a first time in a while.',
-      time: '2m',
-    },
-  ];
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const lastSevenDaysNotifications = [
-    {
-      id: 2,
-      image: require('../assets/images/overlay2.png'),
-      message:
-        'New Follow suggestion and other accepted your follow request.',
-      time: '2m',
-    },
-    {
-      id: 3,
-      image: require('../assets/images/overlay3.png'),
-      message: 'Ava Willams post for a first time in a while.',
-      time: '2m',
-    },
-    {
-      id: 4,
-      image: require('../assets/images/overlay4.png'),
-      message: 'James others like a story.',
-      time: '4d',
-    },
-    {
-      id: 5,
-      image: require('../assets/images/overlay1.png'),
-      message: 'Ava Willams post for a first time in a while.',
-      time: '2m',
-    },
-  ];
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const result = await notificationsApi.list();
+      setItems(result.notifications ?? []);
+      // Opening the screen is what marks them read.
+      notificationsApi.markRead().catch(() => {});
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  const renderBody = () => {
+    if (loading) return <Loading label="Loading notifications" />;
+    if (error) return <ErrorState message={error} onRetry={load} />;
+    if (!items.length) {
+      return (
+        <EmptyState
+          icon="notifications-outline"
+          title="Nothing yet"
+          text="Likes, matches and messages will show up here."
+        />
+      );
+    }
+
+    return items.map(item => (
+      <NotificationCard
+        key={item.id}
+        image={avatarSource(item.actorPhotoUrl)}
+        message={item.actorName ? `${item.actorName}: ${item.body}` : item.body}
+        time={timeAgo(item.createdAt)}
+        showDot={!item.readAt}
+      />
+    ));
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -91,48 +106,12 @@ const NotificationScreen = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}>
-        
-        {/* Header + Filters */}
+
         <View style={styles.headerSection}>
           <AppHeader title="Notifications" />
-
-          <FilterButton
-            items={[
-              {id: 1, name: 'All'},
-              {id: 2, name: 'Likes'},
-              {id: 3, name: 'Follows'},
-              {id: 4, name: 'Comments'},
-            ]}
-          />
         </View>
 
-        {/* Yesterday */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Yesterday</Text>
-
-          {yesterdayNotifications.map(item => (
-            <NotificationCard
-              key={item.id}
-              image={item.image}
-              message={item.message}
-              time={item.time}
-            />
-          ))}
-        </View>
-
-        {/* Last 7 Days */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Last 7 days</Text>
-
-          {lastSevenDaysNotifications.map(item => (
-            <NotificationCard
-              key={item.id}
-              image={item.image}
-              message={item.message}
-              time={item.time}
-            />
-          ))}
-        </View>
+        <View style={styles.section}>{renderBody()}</View>
       </ScrollView>
     </SafeAreaView>
   );

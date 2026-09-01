@@ -1,94 +1,95 @@
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
-import React from 'react';
+import React, { useCallback, useState } from 'react';
+import {
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import Ionicons from '@react-native-vector-icons/ionicons';
+
 import AppIcon from '../../components/AppIcon';
 import AppHeader from '../../components/AppHeader';
-import Ionicons from '@react-native-vector-icons/ionicons';
 import FilterButton from '../../components/FilterButton';
 import MomentCard from '../../components/cards/MomentCard';
+import { Loading, ErrorState, EmptyState } from '../../components/ScreenState';
 import { useTabBarSpacer } from '../../theme/layout';
+import { checkIn } from '../../services/location';
+import { moments as momentsApi } from '../../services/endpoints';
+import { avatarSource, timeAgo, friendlyError } from '../../utils/format';
+
+const WINDOWS = [
+  { id: 'hour', name: 'Right now' },
+  { id: 'today', name: 'Today' },
+  { id: 'week', name: 'This week' },
+];
 
 const DiscoverScreen = ({ navigation }) => {
   const tabBarSpacer = useTabBarSpacer();
-  const moments = [
-    {
-      id: '1',
-      image: require('../../assets/images/overlay1.png'),
-      title: 'Sienna',
-      location: 'Blue Door Cafe',
-      age: 24,
-      timing: '6mins ago',
-      matchPercentage: 55,
+
+  const [people, setPeople] = useState([]);
+  const [window, setWindow] = useState('hour');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+
+  /**
+   * `checkIn` records where you are now and returns who was here with you.
+   * Doing it on focus is the whole product: a moment is captured when you open
+   * the app, which is also why no background location is needed.
+   */
+  const load = useCallback(
+    async (selectedWindow = window, { viaCheckIn = false } = {}) => {
+      setError(null);
+      try {
+        if (viaCheckIn) {
+          const result = await checkIn();
+          setPeople(result.nearby ?? []);
+        } else {
+          const result = await momentsApi.nearby(selectedWindow);
+          setPeople(result.people ?? []);
+        }
+      } catch (err) {
+        setError(friendlyError(err));
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
     },
-    {
-      id: '2',
-      image: require('../../assets/images/overlay2.png'),
-      title: 'Emily',
-      location: 'Downtown Cafe',
-      age: 29,
-      timing: '10mins ago',
-      matchPercentage: 88,
-    },
-    {
-      id: '3',
-      image: require('../../assets/images/overlay3.png'),
-      title: 'Noah',
-      location: 'Artisan Caffe',
-      age: 20,
-      timing: '15mins ago',
-      matchPercentage: 70,
-    },
-    {
-      id: '4',
-      image: require('../../assets/images/overlay4.png'),
-      title: 'Charlotte',
-      location: 'Starlight Lounge',
-      age: 26,
-      timing: '2mins ago',
-      matchPercentage: 90,
-    },
-    {
-      id: '5',
-      image: require('../../assets/images/overlay4.png'),
-      title: 'Oliver',
-      location: 'Central Perk Cafe',
-      age: 25,
-      timing: '4mins ago',
-      matchPercentage: 65,
-    },
-    {
-      id: '6',
-      image: require('../../assets/images/overlay3.png'),
-      title: 'Michael J.',
-      location: 'Rooftop Bistro',
-      age: 27,
-      timing: '2hrs ago',
-      matchPercentage: 79,
-    },
-    {
-      id: '7',
-      image: require('../../assets/images/overlay2.png'),
-      title: 'Sophia',
-      location: 'Metro Bakery',
-      age: 22,
-      timing: '12mins ago',
-      matchPercentage: 91,
-    },
-    {
-      id: '8',
-      image: require('../../assets/images/overlay1.png'),
-      title: 'Ethan',
-      location: 'Urban Roast',
-      age: 31,
-      timing: '18mins ago',
-      matchPercentage: 45,
-    },
-  ];
+    [window],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      load(window, { viaCheckIn: window === 'hour' });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [window]),
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    load(window, { viaCheckIn: window === 'hour' });
+  };
+
+  const onSelectWindow = id => {
+    setWindow(id);
+    setLoading(true);
+  };
+
   const listHeader = (
     <View>
       <AppHeader
         title="Discover"
-        subtitle={`Who's here \u2014 ${moments.length} moments nearby in the last hour.`}
+        subtitle={
+          loading
+            ? 'Looking for moments nearby...'
+            : `Who's here — ${people.length} ${
+                people.length === 1 ? 'moment' : 'moments'
+              } nearby.`
+        }
         rightContent={
           <TouchableOpacity
             activeOpacity={0.66}
@@ -99,46 +100,55 @@ const DiscoverScreen = ({ navigation }) => {
           </TouchableOpacity>
         }
       />
-      <FilterButton
-        items={[
-          { id: 1, name: 'Right now' },
-          { id: 2, name: 'Today' },
-          { id: 3, name: 'This week' },
-        ]}
-      />
+      <FilterButton items={WINDOWS} selectedId={window} onSelect={onSelectWindow} />
     </View>
   );
+
+  const renderBody = () => {
+    if (loading) return <Loading label="Finding people who were near you" />;
+    if (error) {
+      return <ErrorState message={error} onRetry={() => { setLoading(true); load(); }} />;
+    }
+    return (
+      <EmptyState
+        title="No moments yet"
+        text="Nobody else has checked in near you recently. Try again after your next coffee."
+      />
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <AppIcon />
       <FlatList
-        data={moments}
-        keyExtractor={item => item.id}
+        data={people}
+        keyExtractor={item => item.userId}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={listHeader}
-        contentContainerStyle={{ paddingBottom: tabBarSpacer }}
+        contentContainerStyle={{ paddingBottom: tabBarSpacer, flexGrow: 1 }}
+        ListEmptyComponent={renderBody()}
         removeClippedSubviews
         initialNumToRender={6}
         windowSize={9}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#D4A84A"
+            colors={['#D4A84A']}
+          />
+        }
         renderItem={({ item }) => (
           <MomentCard
-            image={item.image}
-            title={item.title}
-            location={item.location}
-            age={item.age}
-            timing={item.timing}
+            image={avatarSource(item.photoUrl)}
+            title={item.name}
+            location={item.placeName || `${item.distanceMetres}m away`}
+            age={item.age ?? '--'}
+            timing={timeAgo(item.lastSeenAt)}
             matchPercentage={item.matchPercentage}
-            onPress={() => {
-              navigation.navigate('PersonProfile', {
-                person: {
-                  image: item.image,
-                  name: item.title,
-                  location: item.location,
-                  age: item.age,
-                },
-              });
-            }}
+            onPress={() =>
+              navigation.navigate('PersonProfile', { userId: item.userId })
+            }
           />
         )}
       />

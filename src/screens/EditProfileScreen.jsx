@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -17,6 +17,11 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import AppHeader from '../components/AppHeader';
 import AppIcon from '../components/AppIcon';
 import AppButton from '../components/AppButton';
+import { Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { users as usersApi } from '../services/endpoints';
+import { useAuth } from '../context/AuthContext';
+import { friendlyError } from '../utils/format';
 
 const interestOptions = [
   { id: 'music', name: 'Music', icon: 'musical-notes-outline' },
@@ -31,20 +36,56 @@ const interestOptions = [
 ];
 
 const EditProfileScreen = ({ navigation }) => {
+  const { refreshUser } = useAuth();
   const [profilePhoto, setProfilePhoto] = useState(
     require('../assets/images/overlay1.png'),
   );
-  const [name, setName] = useState('Ben Wayne');
-  const [age, setAge] = useState('28');
-  const [location, setLocation] = useState('Blue Door Cafe');
-  const [description, setDescription] = useState(
-    'I love good conversations, cozy cafés, and meeting people with a warm smile and kind energy.',
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedInterests, setSelectedInterests] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Load the real profile instead of showing a placeholder person's details.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      usersApi
+        .me()
+        .then(me => {
+          if (!active) return;
+          setName(me.name ?? '');
+          setAge(me.age ? String(me.age) : '');
+          setLocation(me.city ?? '');
+          setDescription(me.bio ?? '');
+        })
+        .catch(err => active && setError(friendlyError(err)));
+      return () => {
+        active = false;
+      };
+    }, []),
   );
-  const [selectedInterests, setSelectedInterests] = useState([
-    'music',
-    'travel',
-    'food',
-  ]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await usersApi.update({
+        name: name.trim(),
+        city: location.trim() || undefined,
+        bio: description.trim() || undefined,
+        interests: selectedInterests,
+      });
+      await refreshUser();
+      navigation.goBack();
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handlePickImage = () => {
     launchImageLibrary(
@@ -54,6 +95,10 @@ const EditProfileScreen = ({ navigation }) => {
         const asset = response.assets && response.assets[0];
         if (asset?.uri) {
           setProfilePhoto({ uri: asset.uri });
+          Alert.alert(
+            'Photo not saved',
+            'Photo upload is not connected yet, so this preview will not persist.',
+          );
         }
       },
     );
@@ -90,7 +135,9 @@ const EditProfileScreen = ({ navigation }) => {
                 height={30}
                 gradientColors={['#000', '#111', '#000']}
                 borderColor="#333"
-                onPress={() => navigation.goBack()}
+                loading={saving}
+                disabled={saving}
+                onPress={handleSave}
               />
             }
           />

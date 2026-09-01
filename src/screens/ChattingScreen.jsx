@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -9,68 +10,92 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import MessageBubble from '../components/MessageBubble';
-
-const myAvatar = require('../assets/images/overlay2.png');
+import { ErrorState } from '../components/ScreenState';
+import { chat as chatApi } from '../services/endpoints';
+import { useAuth } from '../context/AuthContext';
+import { avatarSource, friendlyError } from '../utils/format';
 
 const ChattingScreen = ({ navigation, route }) => {
-  const routeChat = route?.params?.chat || route?.params?.person || {};
+  const { user } = useAuth();
+  const matchId = route?.params?.matchId;
+  const routeChat = route?.params?.chat || {};
+
   const chat = {
     title: routeChat.title || routeChat.name || 'Match',
-    image: routeChat.image,
+    image: routeChat.image || avatarSource(routeChat.photoUrl),
     location: routeChat.location || 'Matched',
-    ...routeChat,
   };
+
   const [message, setMessage] = useState('');
-  // Local-only for now; swap for the conversation from the API (and a socket
-  // subscription) once chat is wired to the backend.
   const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(Boolean(matchId));
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState(null);
   const scrollRef = useRef(null);
 
-  const handleSend = () => {
-    const text = message.trim();
-    if (!text) {
+  const load = useCallback(async () => {
+    if (!matchId) {
+      setLoading(false);
       return;
     }
-    setMessages(prev => [
-      ...prev,
-      {
-        id: `${Date.now()}`,
-        sender: 'me',
-        text,
-        time: new Date().toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-      },
-    ]);
+    setError(null);
+    try {
+      const result = await chatApi.messages(matchId);
+      setMessages(result.messages ?? []);
+      // Opening the thread is what clears the unread badge.
+      chatApi.markRead(matchId).catch(() => {});
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [matchId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleSend = async () => {
+    const text = message.trim();
+    if (!text || !matchId || sending) {
+      return;
+    }
+
+    setSending(true);
     setMessage('');
+    try {
+      const sent = await chatApi.send(matchId, text);
+      setMessages(prev => [...prev, sent]);
+    } catch (err) {
+      // Put the text back so nothing is silently lost.
+      setMessage(text);
+      setError(friendlyError(err));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}>
-      {/* Header */}
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={18} color="#fff" />
         </TouchableOpacity>
 
-        <Image source={chat?.image} style={styles.headerAvatar} />
+        <Image source={chat.image} style={styles.headerAvatar} />
 
         <View style={styles.headerTextBlock}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {chat?.title}
+            {chat.title}
           </Text>
-          <Text style={styles.headerSubtitle}>{chat?.location || 'Matched'}</Text>
+          <Text style={styles.headerSubtitle}>{chat.location}</Text>
         </View>
 
-        <TouchableOpacity style={styles.iconBtn}>
-          <Ionicons name="call-outline" size={18} color="#fff" />
-        </TouchableOpacity>
         <TouchableOpacity style={styles.iconBtn}>
           <Ionicons name="ellipsis-vertical" size={18} color="#fff" />
         </TouchableOpacity>
@@ -85,9 +110,7 @@ const ChattingScreen = ({ navigation, route }) => {
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          onContentSizeChange={() =>
-            scrollRef.current?.scrollToEnd({ animated: true })
-          }
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
           contentContainerStyle={{ paddingBottom: 20, flexGrow: 1 }}
         >
           <LinearGradient
@@ -100,30 +123,45 @@ const ChattingScreen = ({ navigation, route }) => {
               <View style={styles.ring} />
               <View style={[styles.ring, styles.ringOverlap]} />
             </View>
-            <Text style={styles.matchTitle}>Moment Became a match</Text>
-            <Text style={styles.matchSubtitle}>
-              {chat?.title ? `Say hello to ${chat.title}` : 'Say the thing you almost said'}
-            </Text>
+            <Text style={styles.matchTitle}>Moment became a match</Text>
+            <Text style={styles.matchSubtitle}>Say hello to {chat.title}</Text>
           </LinearGradient>
 
-          {messages.length > 0 ? (
+          {loading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator color="#D4A84A" />
+            </View>
+          ) : error ? (
+            <ErrorState message={error} onRetry={load} />
+          ) : messages.length > 0 ? (
             <>
-              <Text style={styles.todayLabel}>Today</Text>
-              {messages.map(item => (
-                <MessageBubble
-                  key={item.id}
-                  item={item}
-                  avatar={item.sender === 'me' ? myAvatar : chat?.image}
-                  name={item.sender === 'me' ? 'David' : chat?.title}
-                />
-              ))}
+              <Text style={styles.todayLabel}>Messages</Text>
+              {messages.map(item => {
+                const mine = item.senderId === user?.userId;
+                return (
+                  <MessageBubble
+                    key={item.id}
+                    item={{
+                      ...item,
+                      sender: mine ? 'me' : 'them',
+                      text: item.body,
+                      time: new Date(item.createdAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }),
+                    }}
+                    avatar={mine ? avatarSource(null) : chat.image}
+                    name={mine ? user?.name || 'You' : chat.title}
+                  />
+                );
+              })}
             </>
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="chatbubble-ellipses-outline" size={24} color="#D4A84A" />
               <Text style={styles.emptyStateTitle}>Start the conversation</Text>
               <Text style={styles.emptyStateText}>
-                Say hello to {chat?.title} and start a new moment.
+                Say hello to {chat.title} and start a new moment.
               </Text>
             </View>
           )}
@@ -138,16 +176,18 @@ const ChattingScreen = ({ navigation, route }) => {
             style={styles.input}
             multiline
             maxLength={2000}
-            returnKeyType="send"
-            blurOnSubmit={false}
-            onSubmitEditing={handleSend}
+            editable={!sending && Boolean(matchId)}
           />
           <TouchableOpacity
-            style={{ marginLeft: 8, opacity: message.trim() ? 1 : 0.4 }}
-            disabled={!message.trim()}
+            style={{ marginLeft: 8, opacity: message.trim() && !sending ? 1 : 0.4 }}
+            disabled={!message.trim() || sending}
             onPress={handleSend}
           >
-            <Ionicons name="send" size={16} color="#D4A84A" />
+            {sending ? (
+              <ActivityIndicator size="small" color="#D4A84A" />
+            ) : (
+              <Ionicons name="send" size={16} color="#D4A84A" />
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -158,127 +198,66 @@ const ChattingScreen = ({ navigation, route }) => {
 export default ChattingScreen;
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 15,
-  },
+  safeArea: { flex: 1, backgroundColor: '#000', paddingHorizontal: 15 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#111',
-    borderWidth: 1,
-    borderColor: '#444',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerAvatar: {
-    width: 40,
-    height: 40,
+    padding: 8,
+    backgroundColor: '#222',
     borderRadius: 50,
-    borderWidth: 1,
-    borderColor: '#D4A84A',
-    marginLeft: 10,
-    resizeMode: 'cover',
+    marginRight: 10,
   },
-  headerTextBlock: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  headerTitle: {
-    color: '#D4A84A',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  headerSubtitle: {
-    color: '#777',
-    fontSize: 10,
-    marginTop: 1,
-  },
-  iconBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 4,
-  },
+  headerAvatar: { width: 38, height: 38, borderRadius: 50 },
+  headerTextBlock: { flex: 1, marginLeft: 10 },
+  headerTitle: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  headerSubtitle: { color: '#8E8E8E', fontSize: 11, marginTop: 2 },
+  iconBtn: { padding: 8 },
+  centered: { paddingVertical: 40, alignItems: 'center' },
   matchBanner: {
-    marginTop: 15,
-    marginBottom: 25,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#4A0000',
-    paddingVertical: 18,
     alignItems: 'center',
+    paddingVertical: 22,
+    borderRadius: 14,
+    marginBottom: 18,
   },
-  ringsIcon: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
+  ringsIcon: { flexDirection: 'row', marginBottom: 8 },
   ring: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 16,
+    height: 16,
+    borderRadius: 50,
     borderWidth: 2,
     borderColor: '#D4A84A',
   },
-  ringOverlap: {
-    marginLeft: -7,
-  },
-  matchTitle: {
-    color: '#D4A84A',
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  matchSubtitle: {
-    color: '#FFFFFFDE',
-    fontSize: 11,
-    // fontStyle: 'italic',
-  },
+  ringOverlap: { marginLeft: -6 },
+  matchTitle: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  matchSubtitle: { color: '#bbb', fontSize: 12, marginTop: 4 },
   todayLabel: {
-    textAlign: 'center',
     color: '#777',
-    fontSize: 10,
-    marginBottom: 18,
+    fontSize: 11,
+    textAlign: 'center',
+    marginBottom: 10,
   },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 30,
-  },
+  emptyState: { alignItems: 'center', paddingTop: 30, paddingHorizontal: 30 },
   emptyStateTitle: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    marginTop: 12,
-    marginBottom: 6,
+    marginTop: 10,
   },
   emptyStateText: {
-    color: '#777',
+    color: '#999',
     fontSize: 12,
     textAlign: 'center',
-    paddingHorizontal: 18,
-    lineHeight: 18,
+    marginTop: 6,
   },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#111',
-    borderColor: '#444',
+    borderColor: '#333',
     borderWidth: 1,
     borderRadius: 50,
     paddingHorizontal: 14,
-    height: 48,
-    marginBottom: 10,
+    paddingVertical: 8,
+    marginBottom: 8,
   },
-  input: {
-    flex: 1,
-    color: '#FFFFFFDE',
-    fontSize: 13,
-    paddingVertical: 0,
-  },
+  input: { flex: 1, color: '#fff', fontSize: 13, maxHeight: 100, paddingVertical: 0 },
 });

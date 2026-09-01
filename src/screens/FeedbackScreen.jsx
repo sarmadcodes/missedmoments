@@ -16,6 +16,8 @@ import AppIcon from '../components/AppIcon';
 import AppHeader from '../components/AppHeader';
 import AppButton from '../components/AppButton';
 import { MAX_FONT_SCALE } from '../theme/typography';
+import { safety as safetyApi } from '../services/endpoints';
+import { friendlyError } from '../utils/format';
 
 const reasons = [
   { id: 'match', label: 'Not finding good matches' },
@@ -32,15 +34,22 @@ const FeedbackScreen = ({ navigation }) => {
 
   const canSubmit = Boolean(selected) && !submitting;
 
-  const handleSubmit = () => {
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async () => {
     if (!canSubmit) {
       return;
     }
     setSubmitting(true);
-    // Replace with POST /feedback once the API is wired.
-    console.log('Feedback:', { reason: selected, message });
-    setSubmitting(false);
-    navigation.goBack();
+    setError(null);
+    try {
+      await safetyApi.feedback(selected, message.trim() || undefined);
+      navigation.goBack();
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -116,6 +125,8 @@ const FeedbackScreen = ({ navigation }) => {
             />
           </View>
 
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
           <AppButton
             title="Submit Feedback"
             width="100%"
@@ -165,4 +176,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   textArea: { color: '#fff', fontSize: 14, minHeight: 110 },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
 });
