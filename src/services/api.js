@@ -80,7 +80,7 @@ export const request = async (path, options = {}) => {
         ...options,
         token,
         signal: controller.signal,
-      }));
+        }));   
     }
 
     if (!res.ok) {
