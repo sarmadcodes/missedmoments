@@ -175,7 +175,7 @@ const MatchesScreen = ({ navigation }) => {
 
   // The API's nearby shape mapped onto what SwipeCard expects.
   const toCardPerson = person => ({
-    image: avatarSource(person.photoUrl),
+    image: avatarSource(person.photoUrl, person.userId),
     name: person.name,
     age: person.age,
     location: person.placeName || `${person.distanceMetres}m away`,

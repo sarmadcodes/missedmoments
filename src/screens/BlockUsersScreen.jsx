@@ -55,7 +55,7 @@ const BlockUsersScreen = ({ navigation }) => {
 
   const renderItem = ({ item }) => (
     <View style={styles.row}>
-      <Image source={avatarSource(item.photoUrl)} style={styles.avatar} />
+      <Image source={avatarSource(item.photoUrl, item.userId)} style={styles.avatar} />
       <View style={{ flex: 1, marginLeft: 12 }}>
         <Text style={styles.name} maxFontSizeMultiplier={MAX_FONT_SCALE}>
           {item.name}

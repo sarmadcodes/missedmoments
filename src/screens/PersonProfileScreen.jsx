@@ -72,7 +72,7 @@ const PersonProfileScreen = ({ navigation, route }) => {
                 matchId: result.matchId,
                 chat: {
                   title: person.name,
-                  image: avatarSource(person.photos?.[0]),
+                  image: avatarSource(person.photos?.[0], userId),
                   userId,
                 },
               }),
@@ -177,7 +177,7 @@ const PersonProfileScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
 
-          <Image source={avatarSource(photos[0])} style={styles.avatar} />
+          <Image source={avatarSource(photos[0], userId)} style={styles.avatar} />
 
           <Text style={styles.name}>
             {person.name}
@@ -277,7 +277,7 @@ const PersonProfileScreen = ({ navigation, route }) => {
                 {photos.map((photo, index) => (
                   <Image
                     key={index}
-                    source={avatarSource(photo)}
+                    source={avatarSource(photo, userId)}
                     style={styles.photoThumb}
                   />
                 ))}

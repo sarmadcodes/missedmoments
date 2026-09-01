@@ -140,7 +140,7 @@ const DiscoverScreen = ({ navigation }) => {
         }
         renderItem={({ item }) => (
           <MomentCard
-            image={avatarSource(item.photoUrl)}
+            image={avatarSource(item.photoUrl, item.userId)}
             title={item.name}
             location={item.placeName || `${item.distanceMetres}m away`}
             age={item.age ?? '--'}

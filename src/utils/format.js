@@ -1,11 +1,31 @@
-const FALLBACK_AVATAR = require('../assets/images/overlay1.png');
+const FALLBACK_AVATARS = [
+  require('../assets/images/overlay1.png'),
+  require('../assets/images/overlay2.png'),
+  require('../assets/images/overlay3.png'),
+  require('../assets/images/overlay4.png'),
+];
 
 /**
  * Photos come back as URLs, but a user may have none (photo upload is not
- * wired yet). Image would render nothing for `{uri: null}`, so fall back.
+ * wired yet). Image renders nothing for `{uri: null}`, so fall back.
+ *
+ * The fallback is picked deterministically from `seed` (pass the user id), so
+ * a given person always shows the same placeholder and a list does not look
+ * like the same face repeated.
  */
-export const avatarSource = url =>
-  url ? { uri: url } : FALLBACK_AVATAR;
+export const avatarSource = (url, seed) => {
+  if (url) {
+    return { uri: url };
+  }
+  if (!seed) {
+    return FALLBACK_AVATARS[0];
+  }
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return FALLBACK_AVATARS[hash % FALLBACK_AVATARS.length];
+};
 
 /** "6 mins ago" from an ISO timestamp. */
 export const timeAgo = iso => {

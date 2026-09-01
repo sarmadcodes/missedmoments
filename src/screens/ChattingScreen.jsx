@@ -27,7 +27,7 @@ const ChattingScreen = ({ navigation, route }) => {
 
   const chat = {
     title: routeChat.title || routeChat.name || 'Match',
-    image: routeChat.image || avatarSource(routeChat.photoUrl),
+    image: routeChat.image || avatarSource(routeChat.photoUrl, routeChat.userId),
     location: routeChat.location || 'Matched',
   };
 
@@ -150,7 +150,7 @@ const ChattingScreen = ({ navigation, route }) => {
                         minute: '2-digit',
                       }),
                     }}
-                    avatar={mine ? avatarSource(null) : chat.image}
+                    avatar={mine ? avatarSource(null, user?.userId) : chat.image}
                     name={mine ? user?.name || 'You' : chat.title}
                   />
                 );

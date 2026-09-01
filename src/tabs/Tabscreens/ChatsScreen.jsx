@@ -131,7 +131,7 @@ const ChatsScreen = ({ navigation }) => {
         }
         renderItem={({ item }) => (
           <ChatCard
-            image={avatarSource(item.photoUrl)}
+            image={avatarSource(item.photoUrl, item.userId)}
             title={item.name}
             time={timeAgo(item.lastMessageAt || item.matchedAt)}
             message={item.lastMessage || 'Say the thing you almost said'}
@@ -141,7 +141,7 @@ const ChatsScreen = ({ navigation }) => {
                 matchId: item.matchId,
                 chat: {
                   title: item.name,
-                  image: avatarSource(item.photoUrl),
+                  image: avatarSource(item.photoUrl, item.userId),
                   userId: item.userId,
                 },
               })

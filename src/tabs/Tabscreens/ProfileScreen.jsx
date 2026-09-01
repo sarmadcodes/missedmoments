@@ -158,7 +158,7 @@ const ProfileScreen = ({ navigation }) => {
 
           <View style={styles.profileBlock}>
             <View style={styles.avatarWrapper}>
-              <Image source={avatarSource(profile.photoUrl)} style={styles.avatar} />
+              <Image source={avatarSource(profile.photoUrl, profile.userId)} style={styles.avatar} />
               <TouchableOpacity
                 activeOpacity={0.8}
                 style={styles.cameraBtn}

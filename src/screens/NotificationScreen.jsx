@@ -91,7 +91,7 @@ const NotificationScreen = () => {
     return items.map(item => (
       <NotificationCard
         key={item.id}
-        image={avatarSource(item.actorPhotoUrl)}
+        image={avatarSource(item.actorPhotoUrl, item.id)}
         message={item.actorName ? `${item.actorName}: ${item.body}` : item.body}
         time={timeAgo(item.createdAt)}
         showDot={!item.readAt}

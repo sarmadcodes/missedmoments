@@ -149,7 +149,7 @@ const LikesScreen = ({ navigation }) => {
                 <PersonCard
                   name={item.name}
                   location={item.placeName || 'Nearby'}
-                  image={avatarSource(item.photoUrl)}
+                  image={avatarSource(item.photoUrl, item.userId)}
                   type="bordered"
                   buttonText="Like back"
                   onPress={() => openProfile(item.userId)}
@@ -177,7 +177,7 @@ const LikesScreen = ({ navigation }) => {
                 <PersonCard
                   name={item.name}
                   location="Matched"
-                  image={avatarSource(item.photoUrl)}
+                  image={avatarSource(item.photoUrl, item.userId)}
                   type="bordered"
                   buttonText="Message"
                   onPress={() => openProfile(item.userId)}
@@ -186,7 +186,7 @@ const LikesScreen = ({ navigation }) => {
                       matchId: item.matchId,
                       chat: {
                         title: item.name,
-                        image: avatarSource(item.photoUrl),
+                        image: avatarSource(item.photoUrl, item.userId),
                         userId: item.userId,
                       },
                     })
