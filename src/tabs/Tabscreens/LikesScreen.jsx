@@ -12,9 +12,11 @@ import AppIcon from '../../components/AppIcon';
 import AppHeader from '../../components/AppHeader';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import PersonCard from '../../components/cards/PersonCard';
+import { useTabBarSpacer } from '../../theme/layout';
 import BannerCard from '../../components/cards/BannerCard';
 
 const LikesScreen = ({ navigation }) => {
+  const tabBarSpacer = useTabBarSpacer();
   const people2 = [
     {
       id: '1',
@@ -58,7 +60,7 @@ const LikesScreen = ({ navigation }) => {
     >
       <AppIcon />
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ paddingBottom: '25%' }}>
+        <View style={{ paddingBottom: tabBarSpacer }}>
           <AppHeader
             title="Likes"
             rightContent={
@@ -123,26 +125,6 @@ const LikesScreen = ({ navigation }) => {
           >
             Someone Nearby
           </Text>
-          <FlatList
-            data={people2}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={item => item.id}
-            ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
-            renderItem={({ item }) => (
-              <PersonCard
-                {...item}
-                type="bordered"
-                buttonText="Reveal"
-                onPress={() => openProfile(item)}
-                onButtonPress={() => {
-                  navigation.navigate('ChattingScreen', {
-                    chat: item,
-                  });
-                }}
-              />
-            )}
-          />
           <FlatList
             data={people2}
             horizontal

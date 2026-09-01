@@ -71,14 +71,25 @@ const DetailRow = ({ icon, label, value }) => (
 const PersonProfileScreen = ({ navigation, route }) => {
   const passedPerson = route?.params?.person;
 
-  const person = passedPerson
-    ? {
-        ...dummyPerson,
-        ...passedPerson,
-        stats: { ...dummyPerson.stats, ...(passedPerson.stats || {}) },
-        details: { ...dummyPerson.details, ...(passedPerson.details || {}) },
-      }
-    : dummyPerson;
+  // Placeholder data is used ONLY when no profile was passed at all (demo /
+  // direct navigation). It is never merged underneath a real profile: a field
+  // the real person hasn't filled in must render as absent, not silently
+  // inherit an invented bio, job or religion belonging to nobody.
+  const person = passedPerson || dummyPerson;
+
+  const stats = person.stats;
+  const details = person.details || {};
+  const interests = person.interests || [];
+  const photos = person.photos || [];
+
+  const detailFields = [
+    { key: 'height', icon: 'resize-outline', label: 'Height' },
+    { key: 'education', icon: 'school-outline', label: 'Education' },
+    { key: 'work', icon: 'briefcase-outline', label: 'Work' },
+    { key: 'religion', icon: 'sparkles-outline', label: 'Religion' },
+    { key: 'smoke', icon: 'close-circle-outline', label: 'Smoke' },
+    { key: 'drink', icon: 'wine-outline', label: 'Drink' },
+  ].filter(field => details[field.key]);
 
   const handleStartConversation = () => {
     navigation.navigate('ChattingScreen', {
@@ -123,39 +134,45 @@ const PersonProfileScreen = ({ navigation, route }) => {
 
           <Text style={styles.name}>{person.name}</Text>
 
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={12} color="#D4A84A" />
-            <Text style={styles.locationText}> {person.location}</Text>
-          </View>
+          {person.location ? (
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={12} color="#D4A84A" />
+              <Text style={styles.locationText}> {person.location}</Text>
+            </View>
+          ) : null}
 
-          <View style={styles.creditsPill}>
-            <Ionicons name="cash-outline" size={12} color="#D4A84A" />
-            <Text style={styles.creditsText}> {person.credits} Credits</Text>
-          </View>
+          {person.credits != null && (
+            <View style={styles.creditsPill}>
+              <Ionicons name="cash-outline" size={12} color="#D4A84A" />
+              <Text style={styles.creditsText}> {person.credits} Credits</Text>
+            </View>
+          )}
         </LinearGradient>
 
         <View style={{ paddingHorizontal: 15 }}>
           {/* Stats */}
-          <View style={styles.statsRow}>
-            <StatItem
-              icon="heart"
-              value={person.stats.liked}
-              label="People liked"
-              color="#E90000"
-            />
-            <StatItem
-              icon="chatbox-ellipses-outline"
-              value={person.stats.conversations}
-              label="Conversations"
-              color="#D4A84A"
-            />
-            <StatItem
-              icon="people-outline"
-              value={person.stats.connections}
-              label="Connections"
-              color="#D4A84A"
-            />
-          </View>
+          {stats && (
+            <View style={styles.statsRow}>
+              <StatItem
+                icon="heart"
+                value={stats.liked ?? 0}
+                label="People liked"
+                color="#E90000"
+              />
+              <StatItem
+                icon="chatbox-ellipses-outline"
+                value={stats.conversations ?? 0}
+                label="Conversations"
+                color="#D4A84A"
+              />
+              <StatItem
+                icon="people-outline"
+                value={stats.connections ?? 0}
+                label="Connections"
+                color="#D4A84A"
+              />
+            </View>
+          )}
 
           {/* Action buttons */}
           <View style={styles.actionsRow}>
@@ -190,98 +207,86 @@ const PersonProfileScreen = ({ navigation, route }) => {
           </View>
 
           {/* About */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons
-                name="person-outline"
-                size={15}
-                color="#E90000"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.cardHeaderText}>About {person.name}</Text>
-            </View>
-            <Text style={styles.aboutText}>{person.about}</Text>
+          {(person.about || detailFields.length > 0) && (
+            <View style={styles.card}>
+              <View style={styles.cardHeaderRow}>
+                <Ionicons
+                  name="person-outline"
+                  size={15}
+                  color="#E90000"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.cardHeaderText}>About {person.name}</Text>
+              </View>
 
-            <View style={styles.detailsGrid}>
-              <DetailRow
-                icon="resize-outline"
-                label="Height"
-                value={person.details.height}
-              />
-              <DetailRow
-                icon="school-outline"
-                label="Education"
-                value={person.details.education}
-              />
-              <DetailRow
-                icon="briefcase-outline"
-                label="Work"
-                value={person.details.work}
-              />
-              <DetailRow
-                icon="sparkles-outline"
-                label="Religion"
-                value={person.details.religion}
-              />
-              <DetailRow
-                icon="close-circle-outline"
-                label="Smoke"
-                value={person.details.smoke}
-              />
-              <DetailRow
-                icon="wine-outline"
-                label="Drink"
-                value={person.details.drink}
-              />
+              {person.about ? (
+                <Text style={styles.aboutText}>{person.about}</Text>
+              ) : null}
+
+              {detailFields.length > 0 && (
+                <View style={styles.detailsGrid}>
+                  {detailFields.map(field => (
+                    <DetailRow
+                      key={field.key}
+                      icon={field.icon}
+                      label={field.label}
+                      value={details[field.key]}
+                    />
+                  ))}
+                </View>
+              )}
             </View>
-          </View>
+          )}
 
           {/* Interests */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons
-                name="star-outline"
-                size={15}
-                color="#E90000"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.cardHeaderText}>Interests</Text>
+          {interests.length > 0 && (
+            <View style={styles.card}>
+              <View style={styles.cardHeaderRow}>
+                <Ionicons
+                  name="star-outline"
+                  size={15}
+                  color="#E90000"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.cardHeaderText}>Interests</Text>
+              </View>
+              <View style={styles.chipsRow}>
+                {interests.map(interest => (
+                  <View key={interest} style={styles.chip}>
+                    <Ionicons
+                      name={interestIcons[interest] || 'ellipse-outline'}
+                      size={12}
+                      color="#E90000"
+                    />
+                    <Text style={styles.chipText}> {interest}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
-            <View style={styles.chipsRow}>
-              {person.interests.map(interest => (
-                <View key={interest} style={styles.chip}>
-                  <Ionicons
-                    name={interestIcons[interest] || 'ellipse-outline'}
-                    size={12}
-                    color="#E90000"
-                  />
-                  <Text style={styles.chipText}> {interest}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
+          )}
 
           {/* Photos */}
-          <View style={styles.photosHeaderRow}>
-            <View style={styles.cardHeaderRow}>
-              <Ionicons
-                name="image-outline"
-                size={15}
-                color="#E90000"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.cardHeaderText}>Photos</Text>
-            </View>
-            <TouchableOpacity>
-              {/* <Text style={styles.viewAllText}>View all ›</Text> */}
-            </TouchableOpacity>
-          </View>
+          {photos.length > 0 && (
+            <>
+              <View style={styles.photosHeaderRow}>
+                <View style={styles.cardHeaderRow}>
+                  <Ionicons
+                    name="image-outline"
+                    size={15}
+                    color="#E90000"
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={styles.cardHeaderText}>Photos</Text>
+                </View>
+              </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {person.photos.map((photo, index) => (
-              <Image key={index} source={photo} style={styles.photoThumb} />
-            ))}
-          </ScrollView>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {photos.map((photo, index) => (
+                  <Image key={index} source={photo} style={styles.photoThumb} />
+                ))}
+              </ScrollView>
+            </>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

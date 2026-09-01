@@ -1,5 +1,8 @@
 import {
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,14 +19,28 @@ import AppIcon from '../components/AppIcon';
 const Loginscreen = ({ navigation }) => {
   const [passwordVisible, setPasswordVisible] = useState(false);
 
+  // `reset` rather than `navigate`: signing in must clear the auth screens so
+  // the Android back button cannot walk back into the login form.
   const handleSignIn = () => {
-    navigation.navigate('BottomNavigation');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'BottomNavigation' }],
+    });
   };
 
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}
     >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
+        >
       <AppIcon />
       <View style={styles.content}>
         {/* Header */}
@@ -124,6 +141,8 @@ const Loginscreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -131,7 +150,8 @@ const Loginscreen = ({ navigation }) => {
 export default Loginscreen;
 
 const styles = StyleSheet.create({
-  content: { justifyContent: 'center', flex: 1 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center' },
+  content: { justifyContent: 'center' },
   header: { marginBottom: 15 },
   title: {
     fontSize: 24,

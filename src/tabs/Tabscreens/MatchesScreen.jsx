@@ -11,13 +11,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppIcon from '../../components/AppIcon';
 import AppHeader from '../../components/AppHeader';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import SwipeCard, {
-  CARD_WIDTH,
-  CARD_HEIGHT,
-  SCREEN_WIDTH,
-} from '../../components/cards/SwipeCard';
+import SwipeCard, { useCardMetrics } from '../../components/cards/SwipeCard';
+import { useTabBarSpacer } from '../../theme/layout';
 
-const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.28;
 const SWIPE_OUT_DURATION = 250;
 
 const MatchesScreen = ({ navigation }) => {
@@ -165,7 +161,28 @@ const MatchesScreen = ({ navigation }) => {
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const [toastLabel, setToastLabel] = useState(null);
 
+  // The PanResponder below is built once and never rebuilt, so every value it
+  // reaches through closure is frozen at the first render. Reading the index
+  // from a ref is what keeps a dragged card acting on the person actually on
+  // top of the deck instead of always on person #1.
+  const currentIndexRef = useRef(0);
+
+  const { screenWidth, cardWidth, cardHeight, swipeThreshold } =
+    useCardMetrics();
+  const tabBarSpacer = useTabBarSpacer();
+
+  // Same reason as currentIndexRef: the frozen gesture handlers need the
+  // current window metrics, not the ones from the first render.
+  const metricsRef = useRef({ screenWidth, swipeThreshold });
+  metricsRef.current = { screenWidth, swipeThreshold };
+
+  // Same again for the deck itself, so this keeps working once `people` comes
+  // from the API instead of a static array.
+  const peopleRef = useRef(people);
+  peopleRef.current = people;
+
   useEffect(() => {
+    currentIndexRef.current = currentIndex;
     position.setValue({ x: 0, y: 0 });
   }, [currentIndex]);
 
@@ -205,11 +222,12 @@ const MatchesScreen = ({ navigation }) => {
         position.setValue({ x: gesture.dx, y: gesture.dy });
       },
       onPanResponderRelease: (evt, gesture) => {
-        if (gesture.dx > SWIPE_THRESHOLD) {
+        const { swipeThreshold: threshold } = metricsRef.current;
+        if (gesture.dx > threshold) {
           forceSwipe('right');
-        } else if (gesture.dx < -SWIPE_THRESHOLD) {
+        } else if (gesture.dx < -threshold) {
           forceSwipe('left');
-        } else if (gesture.dy < -SWIPE_THRESHOLD) {
+        } else if (gesture.dy < -threshold) {
           forceSwipe('up');
         } else {
           resetPosition();
@@ -219,13 +237,14 @@ const MatchesScreen = ({ navigation }) => {
   ).current;
 
   const forceSwipe = direction => {
+    const { screenWidth: width } = metricsRef.current;
     const x =
       direction === 'right'
-        ? SCREEN_WIDTH * 1.5
+        ? width * 1.5
         : direction === 'left'
-        ? -SCREEN_WIDTH * 1.5
+        ? -width * 1.5
         : 0;
-    const y = direction === 'up' ? -SCREEN_WIDTH * 1.5 : 0;
+    const y = direction === 'up' ? -width * 1.5 : 0;
     Animated.timing(position, {
       toValue: { x, y },
       duration: SWIPE_OUT_DURATION,
@@ -234,7 +253,13 @@ const MatchesScreen = ({ navigation }) => {
   };
 
   const onSwipeComplete = direction => {
-    const person = people[currentIndex];
+    const person = peopleRef.current[currentIndexRef.current];
+    if (!person) {
+      return;
+    }
+    // Keep the ref in step immediately; the effect above only runs after the
+    // next render, and a fast second gesture can land before that.
+    currentIndexRef.current += 1;
     if (direction === 'right') {
       handleLikePerson(person);
       showToast('like');
@@ -265,7 +290,7 @@ const MatchesScreen = ({ navigation }) => {
 
   const getCardStyle = () => {
     const rotate = position.x.interpolate({
-      inputRange: [-SCREEN_WIDTH * 1.5, 0, SCREEN_WIDTH * 1.5],
+      inputRange: [-screenWidth * 1.5, 0, screenWidth * 1.5],
       outputRange: ['-18deg', '0deg', '18deg'],
     });
     return {
@@ -275,12 +300,12 @@ const MatchesScreen = ({ navigation }) => {
   };
 
   const likeOpacity = position.x.interpolate({
-    inputRange: [20, SWIPE_THRESHOLD],
+    inputRange: [20, swipeThreshold],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
   const nopeOpacity = position.x.interpolate({
-    inputRange: [-SWIPE_THRESHOLD, -20],
+    inputRange: [-swipeThreshold, -20],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
@@ -306,7 +331,11 @@ const MatchesScreen = ({ navigation }) => {
           return (
             <Animated.View
               key={person.id}
-              style={[styles.cardWrapper, getCardStyle()]}
+              style={[
+                styles.cardWrapper,
+                { width: cardWidth, height: cardHeight },
+                getCardStyle(),
+              ]}
               {...panResponder.panHandlers}
             >
               <SwipeCard
@@ -354,6 +383,7 @@ const MatchesScreen = ({ navigation }) => {
             style={[
               styles.cardWrapper,
               styles.stackedCard,
+              { width: cardWidth, height: cardHeight },
               { top: 8 * depth, transform: [{ scale: 1 - 0.04 * depth }] },
             ]}
           >
@@ -374,7 +404,7 @@ const MatchesScreen = ({ navigation }) => {
       <View style={styles.deckArea}>{renderCards()}</View>
 
       {currentIndex < people.length && (
-        <View style={styles.actionsRow}>
+        <View style={[styles.actionsRow, { marginBottom: tabBarSpacer }]}>
           <TouchableOpacity
             activeOpacity={0.8}
             style={[styles.actionBtn, styles.passBtn]}
@@ -398,7 +428,7 @@ const MatchesScreen = ({ navigation }) => {
           style={[
             styles.toast,
             toastLabel === 'like' ? styles.toastLike : styles.toastPass,
-            { opacity: toastOpacity },
+            { opacity: toastOpacity, bottom: tabBarSpacer + 60 },
           ]}
         >
           <Ionicons
@@ -425,8 +455,6 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     position: 'absolute',
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
   },
   stackedCard: {
     zIndex: -1,
@@ -466,7 +494,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 30,
-    marginBottom: '35%',
   },
   actionBtn: {
     width: 55,
@@ -502,7 +529,6 @@ const styles = StyleSheet.create({
   },
   toast: {
     position: 'absolute',
-    bottom: 130,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
