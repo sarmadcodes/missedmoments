@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { pickImage, uploadPhoto } from '../services/media';
 
 import AppButton from '../components/AppButton';
 import AppIcon from '../components/AppIcon';
@@ -50,36 +50,30 @@ const RegisterScreen = ({ navigation }) => {
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [momentPhotos, setMomentPhotos] = useState([null, null, null, null]);
   const [selectedInterests, setSelectedInterests] = useState([]);
+  const [pickError, setPickError] = useState(null);
 
-  const handlePickImage = (target, index) => {
-    launchImageLibrary(
-      {
-        mediaType: 'photo',
-        selectionLimit: 1,
-        quality: 0.8,
-      },
-      response => {
-        if (response.didCancel || response.errorCode) {
-          return;
-        }
+  // The account does not exist yet at this step, so there is nothing to
+  // attach an upload to. Photos are held locally and uploaded immediately
+  // after the account is created.
+  const handlePickImage = async (target, index) => {
+    setPickError(null);
+    try {
+      const asset = await pickImage();
+      if (!asset) return;
 
-        const asset = response.assets && response.assets[0];
-        if (!asset || !asset.uri) {
-          return;
-        }
+      if (target === 'profile') {
+        setProfilePhoto(asset);
+        return;
+      }
 
-        if (target === 'profile') {
-          setProfilePhoto(asset.uri);
-          return;
-        }
-
-        setMomentPhotos(prev => {
-          const next = [...prev];
-          next[index] = asset.uri;
-          return next;
-        });
-      },
-    );
+      setMomentPhotos(prev => {
+        const next = [...prev];
+        next[index] = asset;
+        return next;
+      });
+    } catch (err) {
+      setPickError(err?.message || 'Could not open your photos');
+    }
   };
 
   const toggleInterest = id => {
@@ -142,11 +136,21 @@ const RegisterScreen = ({ navigation }) => {
         interests: selectedInterests,
       });
 
-      if (profilePhoto || momentPhotos.some(Boolean)) {
-        Alert.alert(
-          'Account created',
-          'Photo upload is not connected yet, so your photos were not saved. Everything else is set up.',
-        );
+      // Uploads run after signUp so the request carries the new session.
+      // A failure here must not block getting into the app -- the account
+      // exists, and photos can be added from Edit Profile.
+      const photos = [profilePhoto, ...momentPhotos].filter(Boolean);
+      if (photos.length) {
+        try {
+          for (const [index, asset] of photos.entries()) {
+            await uploadPhoto(asset, { isPrimary: index === 0 });
+          }
+        } catch (uploadErr) {
+          Alert.alert(
+            'Account created',
+            `Your account is ready, but a photo did not upload: ${uploadErr.message}. You can add photos from Edit Profile.`,
+          );
+        }
       }
 
       navigation.reset({ index: 0, routes: [{ name: 'BottomNavigation' }] });
@@ -313,7 +317,7 @@ const RegisterScreen = ({ navigation }) => {
             >
               {profilePhoto ? (
                 <Image
-                  source={{ uri: profilePhoto }}
+                  source={{ uri: profilePhoto.uri }}
                   style={styles.profileImage}
                 />
               ) : (
@@ -340,7 +344,7 @@ const RegisterScreen = ({ navigation }) => {
                   onPress={() => handlePickImage('moment', index)}
                 >
                   {item ? (
-                    <Image source={{ uri: item }} style={styles.momentImage} />
+                    <Image source={{ uri: item.uri }} style={styles.momentImage} />
                   ) : (
                     <View style={styles.uploadPlaceholderSmall}>
                       <Ionicons name="add" size={24} color="#777" />
@@ -393,7 +397,9 @@ const RegisterScreen = ({ navigation }) => {
         )}
 
         <View style={styles.buttonWrapper}>
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error || pickError ? (
+            <Text style={styles.errorText}>{error || pickError}</Text>
+          ) : null}
 
           <AppButton
             title={currentStep < 2 ? 'Continue' : 'Finish'}

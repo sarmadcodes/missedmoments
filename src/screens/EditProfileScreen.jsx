@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -12,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { pickAndUploadPhoto } from '../services/media';
 
 import AppHeader from '../components/AppHeader';
 import AppIcon from '../components/AppIcon';
@@ -46,6 +47,7 @@ const EditProfileScreen = ({ navigation }) => {
   const [description, setDescription] = useState('');
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
 
   // Load the real profile instead of showing a placeholder person's details.
@@ -57,6 +59,7 @@ const EditProfileScreen = ({ navigation }) => {
         .then(me => {
           if (!active) return;
           setName(me.name ?? '');
+          if (me.photoUrl) setProfilePhoto({ uri: me.photoUrl });
           setAge(me.age ? String(me.age) : '');
           setLocation(me.city ?? '');
           setDescription(me.bio ?? '');
@@ -87,21 +90,20 @@ const EditProfileScreen = ({ navigation }) => {
     }
   };
 
-  const handlePickImage = () => {
-    launchImageLibrary(
-      { mediaType: 'photo', quality: 0.8 },
-      response => {
-        if (response.didCancel || response.errorCode) return;
-        const asset = response.assets && response.assets[0];
-        if (asset?.uri) {
-          setProfilePhoto({ uri: asset.uri });
-          Alert.alert(
-            'Photo not saved',
-            'Photo upload is not connected yet, so this preview will not persist.',
-          );
-        }
-      },
-    );
+  const handlePickImage = async () => {
+    setError(null);
+    setUploading(true);
+    try {
+      const photo = await pickAndUploadPhoto({ isPrimary: true });
+      if (photo) {
+        setProfilePhoto({ uri: photo.url });
+        await refreshUser();
+      }
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setUploading(false);
+    }
   };
 
   const toggleInterest = id => {
@@ -149,8 +151,13 @@ const EditProfileScreen = ({ navigation }) => {
                 activeOpacity={0.8}
                 style={styles.cameraBtn}
                 onPress={handlePickImage}
+                disabled={uploading}
               >
-                <Ionicons name="camera" size={12} color="#fff" />
+                {uploading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="camera" size={12} color="#fff" />
+                )}
               </TouchableOpacity>
             </View>
           </View>
