@@ -47,18 +47,19 @@ const styles = StyleSheet.create({
 
   leftContainer: {
     justifyContent: 'center',
+    minWidth: 0,
   },
 
   withRightContent: {
-    width: '70%',
+    flex: 1,
   },
 
   fullWidth: {
-    width: '100%',
+    flex: 1,
   },
 
   rightContainer: {
-    width: '25%',
+    marginLeft: 12,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },

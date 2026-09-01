@@ -78,7 +78,7 @@ const SettingScreen = ({ navigation }) => {
     >
       <AppIcon />
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ paddingBottom: '25%' }}>
+        <View style={{ paddingBottom: 40 }}>
           <AppHeader title="Settings" />
 
           {/* Visibility */}

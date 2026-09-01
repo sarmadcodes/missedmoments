@@ -1,32 +1,53 @@
 import React from 'react';
 import {
-  Dimensions,
   Image,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from '@react-native-vector-icons/ionicons';
+import { MAX_FONT_SCALE } from '../../theme/typography';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-export const CARD_WIDTH = SCREEN_WIDTH - 30; // matches paddingHorizontal:15 on both sides
-export const CARD_HEIGHT = SCREEN_HEIGHT * 0.5;
-export { SCREEN_WIDTH };
+// Horizontal padding applied by the screens that host this card.
+const SCREEN_GUTTER = 15;
+
+/**
+ * Card dimensions, recalculated whenever the window changes.
+ *
+ * These used to be module-level constants derived from `Dimensions.get()`,
+ * which froze them at app launch and left the deck mis-sized after a rotation
+ * or in split-screen.
+ */
+export const useCardMetrics = () => {
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+
+  return {
+    screenWidth: width,
+    cardWidth: width - SCREEN_GUTTER * 2,
+    // In landscape half the height is far too short to be readable, so lean on
+    // width instead and clamp so the card never overruns the viewport.
+    cardHeight: Math.min(isLandscape ? height * 0.62 : height * 0.5, height * 0.7),
+    swipeThreshold: width * 0.28,
+  };
+};
 
 const SwipeCard = ({ person, onPress }) => {
+  const { cardWidth, cardHeight } = useCardMetrics();
   const interests = person.interests || ['Music', 'Travel'];
   const likes = person.likes ?? 120;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { width: cardWidth, height: cardHeight }]}>
       <Image source={person.image} style={styles.image} />
       <LinearGradient
         colors={['transparent', '#000000E6']}
         style={styles.gradient}
       >
-        <Text style={styles.name}>
+        <Text style={styles.name} maxFontSizeMultiplier={MAX_FONT_SCALE}>
           {person.name}
           {person.age ? `, ${person.age}` : ''}
         </Text>
@@ -34,27 +55,45 @@ const SwipeCard = ({ person, onPress }) => {
         {person.location ? (
           <View style={styles.metaRow}>
             <Ionicons name="location-outline" size={12} color="#D4A84A" />
-            <Text style={styles.location}>{person.location}</Text>
+            <Text
+              style={styles.location}
+              numberOfLines={1}
+              maxFontSizeMultiplier={MAX_FONT_SCALE}
+            >
+              {person.location}
+            </Text>
           </View>
         ) : null}
 
         <View style={styles.detailRow}>
           <View style={styles.infoPill}>
             <Ionicons name="heart-outline" size={11} color="#D4A84A" />
-            <Text style={styles.infoText}>{likes} likes</Text>
+            <Text style={styles.infoText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+              {likes} likes
+            </Text>
           </View>
           <View style={styles.infoPill}>
             <Ionicons name="sparkles-outline" size={11} color="#D4A84A" />
-            <Text style={styles.infoText}>
+            <Text
+              style={styles.infoText}
+              numberOfLines={1}
+              maxFontSizeMultiplier={MAX_FONT_SCALE}
+            >
               {interests.slice(0, 2).join(' • ')}
             </Text>
           </View>
-          <TouchableOpacity onPress={onPress}
+          <TouchableOpacity
+            onPress={onPress}
             activeOpacity={0.66}
             style={styles.swipeUpIndicator}
           >
             <Ionicons name="arrow-up" size={12} color="#D4A84A" />
-            <Text style={styles.swipeUpText}>View</Text>
+            <Text
+              style={styles.swipeUpText}
+              maxFontSizeMultiplier={MAX_FONT_SCALE}
+            >
+              View
+            </Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -64,8 +103,6 @@ const SwipeCard = ({ person, onPress }) => {
 
 const styles = StyleSheet.create({
   card: {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
     borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: '#111',
@@ -100,10 +137,12 @@ const styles = StyleSheet.create({
     color: '#D4A84A',
     fontSize: 12,
     marginLeft: 6,
+    flexShrink: 1,
   },
   detailRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
     marginTop: 10,
     gap: 8,
   },
@@ -116,12 +155,13 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderWidth: 1,
     borderColor: 'rgba(212,168,74,0.25)',
-    maxWidth: '100%',
+    flexShrink: 1,
   },
   infoText: {
     color: '#fff',
     fontSize: 10,
     marginLeft: 5,
+    flexShrink: 1,
   },
   swipeUpIndicator: {
     flexDirection: 'row',

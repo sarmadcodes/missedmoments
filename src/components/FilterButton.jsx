@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-const { width } = Dimensions.get('window');
 const GAP = 6;
-const PADDING = 10;
-const BUTTON_WIDTH = (width - PADDING * 3 - GAP * 3) / 4;
 
 const FilterButton = ({ items }) => {
   
@@ -67,8 +64,11 @@ const styles = StyleSheet.create({
     gap: GAP,
   },
   button: {
-    width: BUTTON_WIDTH,
+    flexGrow: 1,
+    flexBasis: 0,
+    minWidth: 88,
     height: 33,
+    paddingHorizontal: 10,
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',

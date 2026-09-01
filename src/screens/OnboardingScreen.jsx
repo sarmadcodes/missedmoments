@@ -6,14 +6,11 @@ import {
   ImageBackground,
   StyleSheet,
   StatusBar,
-  Dimensions,
 } from 'react-native';
 
 import AppButton from '../components/AppButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ScreenWrapper from '../components/ScreenWrapper';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const OnboardScreen = ({ navigation }) => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -141,7 +138,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    // paddingTop: SCREEN_HEIGHT * 0.2,
   },
 
   logoContainer: {

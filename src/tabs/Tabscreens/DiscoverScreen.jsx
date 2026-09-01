@@ -1,10 +1,4 @@
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppIcon from '../../components/AppIcon';
@@ -12,8 +6,10 @@ import AppHeader from '../../components/AppHeader';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import FilterButton from '../../components/FilterButton';
 import MomentCard from '../../components/cards/MomentCard';
+import { useTabBarSpacer } from '../../theme/layout';
 
 const DiscoverScreen = ({ navigation }) => {
+  const tabBarSpacer = useTabBarSpacer();
   const moments = [
     {
       id: '1',
@@ -88,65 +84,71 @@ const DiscoverScreen = ({ navigation }) => {
       matchPercentage: 45,
     },
   ];
-  return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}
-    >
-      <AppIcon />
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ paddingBottom: '25%' }}>
-          <AppHeader
-            title="Discover"
-            subtitle="Who's here 8 moments nearby in the last hour."
-            rightContent={
-              <TouchableOpacity
-                activeOpacity={0.66}
-                onPress={() => navigation.navigate('NotificationScreen')}
-                style={{
-                  padding: 10,
-                  backgroundColor: '#333',
-                  borderRadius: 50,
-                }}
-              >
-                <Ionicons name="notifications" size={20} color={'#fff'} />
-              </TouchableOpacity>
-            }
-          />
-          <FilterButton
-            items={[
-              { id: 1, name: 'Right now' },
-              { id: 2, name: 'Today' },
-              { id: 3, name: 'This week' },
-            ]}
-          />
+  const listHeader = (
+    <View>
+      <AppHeader
+        title="Discover"
+        subtitle={`Who's here \u2014 ${moments.length} moments nearby in the last hour.`}
+        rightContent={
+          <TouchableOpacity
+            activeOpacity={0.66}
+            onPress={() => navigation.navigate('NotificationScreen')}
+            style={styles.bellBtn}
+          >
+            <Ionicons name="notifications" size={20} color={'#fff'} />
+          </TouchableOpacity>
+        }
+      />
+      <FilterButton
+        items={[
+          { id: 1, name: 'Right now' },
+          { id: 2, name: 'Today' },
+          { id: 3, name: 'This week' },
+        ]}
+      />
+    </View>
+  );
 
-          {moments.map(item => (
-            <MomentCard
-              key={item.id}
-              image={item.image}
-              title={item.title}
-              location={item.location}
-              age={item.age}
-              timing={item.timing}
-              matchPercentage={item.matchPercentage}
-              onPress={() => {
-                navigation.navigate('PersonProfile', {
-                  person: {
-                    image: item.image,
-                    name: item.title,
-                    location: item.location,
-                    age: item.age,
-                  },
-                });
-              }}
-            />
-          ))}
-        </View>
-      </ScrollView>
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <AppIcon />
+      <FlatList
+        data={moments}
+        keyExtractor={item => item.id}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={listHeader}
+        contentContainerStyle={{ paddingBottom: tabBarSpacer }}
+        removeClippedSubviews
+        initialNumToRender={6}
+        windowSize={9}
+        renderItem={({ item }) => (
+          <MomentCard
+            image={item.image}
+            title={item.title}
+            location={item.location}
+            age={item.age}
+            timing={item.timing}
+            matchPercentage={item.matchPercentage}
+            onPress={() => {
+              navigation.navigate('PersonProfile', {
+                person: {
+                  image: item.image,
+                  name: item.title,
+                  location: item.location,
+                  age: item.age,
+                },
+              });
+            }}
+          />
+        )}
+      />
     </SafeAreaView>
   );
 };
 
 export default DiscoverScreen;
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#000', paddingHorizontal: 15 },
+  bellBtn: { padding: 10, backgroundColor: '#333', borderRadius: 50 },
+});

@@ -3,18 +3,19 @@ import {
   View,
   Image,
   StyleSheet,
-  Dimensions,
   StatusBar,
+  useWindowDimensions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-
-const { width, height } = Dimensions.get('window');
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ScreenWrapper = ({ 
   children, 
   imageSource, 
   backgroundColor
 }) => {
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const IMAGE_HEIGHT = height * 0.55;
 
   return (
@@ -40,7 +41,14 @@ const ScreenWrapper = ({
         />
       </View>
 
-      <View style={styles.contentContainer}>
+      <View
+        style={[
+          styles.contentContainer,
+          // Real insets instead of a hard-coded marginVertical:25, which
+          // collided with the notch on some devices.
+          { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 10 },
+        ]}
+      >
         {children}
       </View>
     </View>
@@ -58,8 +66,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     backgroundColor: 'transparent',
-    marginVertical:25, paddingHorizontal:15
-    
+    paddingHorizontal: 15,
   },
 });
 

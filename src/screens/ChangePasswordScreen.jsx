@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import {
   Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -64,9 +66,17 @@ const ChangePasswordScreen = ({ navigation }) => {
     <SafeAreaView
       style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}
     >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <AppIcon />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.content}
+      >
         <AppHeader
           title="Change Password"
           subtitle="Update your password to keep your account secure"
@@ -120,6 +130,7 @@ const ChangePasswordScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <Image
         source={require('../assets/images/goldheart.png')}

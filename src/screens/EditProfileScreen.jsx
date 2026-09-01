@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import {
   Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -69,9 +71,16 @@ const EditProfileScreen = ({ navigation }) => {
     <SafeAreaView
       style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}
     >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <AppIcon />
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ paddingBottom: '25%' }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={{ paddingBottom: 40 }}>
           <AppHeader
             title="Edit Your Profile"
             rightContent={
@@ -201,6 +210,7 @@ const EditProfileScreen = ({ navigation }) => {
           /> */}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

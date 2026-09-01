@@ -1,9 +1,8 @@
 import {
-  ScrollView,
+  FlatList,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import React, { useState } from 'react';
@@ -12,8 +11,10 @@ import AppIcon from '../../components/AppIcon';
 import AppHeader from '../../components/AppHeader';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import ChatCard from '../../components/cards/ChatCard';
+import { useTabBarSpacer } from '../../theme/layout';
 
 const ChatsScreen = ({ navigation }) => {
+  const tabBarSpacer = useTabBarSpacer();
   const [searchText, setSearchText] = useState('');
   const chats = [
     {
@@ -89,48 +90,58 @@ const ChatsScreen = ({ navigation }) => {
     );
   });
 
+  // Kept as an element rather than a component so React reconciles it in
+  // place; passing a new function to ListHeaderComponent remounts the header
+  // on every keystroke and the search field loses focus.
+  const listHeader = (
+    <View>
+      <AppHeader title="Inbox" />
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={18} color="#777" style={styles.searchIcon} />
+        <TextInput
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder="Search"
+          placeholderTextColor="#777"
+          style={styles.searchInput}
+          autoCorrect={false}
+        />
+      </View>
+    </View>
+  );
+
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: '#000', paddingHorizontal: 15 }}
-    >
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <AppIcon />
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ paddingBottom: '25%' }}>
-          <AppHeader
-            title="Inbox"
-            
-          />
-
-          <View style={styles.searchContainer}>
-            <Ionicons
-              name="search"
-              size={18}
-              color="#777"
-              style={styles.searchIcon}
-            />
-            <TextInput
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Search"
-              placeholderTextColor="#777"
-              style={styles.searchInput}
-            />
+      <FlatList
+        data={filteredChats}
+        keyExtractor={item => item.id}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={listHeader}
+        contentContainerStyle={{ paddingBottom: tabBarSpacer }}
+        initialNumToRender={8}
+        windowSize={9}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="chatbubbles-outline" size={28} color="#D4A84A" />
+            <Text style={styles.emptyTitle}>No conversations</Text>
+            <Text style={styles.emptyText}>
+              {searchText
+                ? `Nothing matches "${searchText}".`
+                : 'Your matches will show up here.'}
+            </Text>
           </View>
-
-          {filteredChats.map(item => (
-            <ChatCard
-              key={item.id}
-              {...item}
-              onPress={() => {
-                console.log('Chat pressed:', item.title);
-                navigation.navigate('ChattingScreen', {
-                  chat: item,
-                });
-              }}
-            />
-          ))}
-        </View>
-      </ScrollView>
+        }
+        renderItem={({ item }) => (
+          <ChatCard
+            {...item}
+            onPress={() => {
+              navigation.navigate('ChattingScreen', { chat: item });
+            }}
+          />
+        )}
+      />
     </SafeAreaView>
   );
 };
@@ -138,6 +149,10 @@ const ChatsScreen = ({ navigation }) => {
 export default ChatsScreen;
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#000', paddingHorizontal: 15 },
+  emptyState: { alignItems: 'center', paddingTop: 40, paddingHorizontal: 30 },
+  emptyTitle: { color: '#fff', fontSize: 15, fontWeight: '700', marginTop: 10 },
+  emptyText: { color: '#999', fontSize: 12, textAlign: 'center', marginTop: 6 },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',

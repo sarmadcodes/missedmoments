@@ -7,7 +7,8 @@ import {
   StyleSheet,
   ScrollView,
   Image,
-  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -15,8 +16,6 @@ import { launchImageLibrary } from 'react-native-image-picker';
 
 import AppButton from '../components/AppButton';
 import AppIcon from '../components/AppIcon';
-
-const { width } = Dimensions.get('window');
 
 const interestOptions = [
   { id: 'music', name: 'Music', icon: 'musical-notes-outline' },
@@ -137,7 +136,15 @@ const RegisterScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <AppIcon />
 
         <View style={styles.header}>
@@ -334,6 +341,7 @@ const RegisterScreen = ({ navigation }) => {
         </View>
 
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -446,7 +454,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   smallUploadBox: {
-    width: (width - 50) / 2,
+    width: '48%',
     height: 90,
     borderRadius: 10,
     borderWidth: 1,
@@ -473,7 +481,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   interestButton: {
-    width: (width - 65) / 3,
+    width: '31%',
     height: 30,
     borderRadius: 50,
     borderWidth: 1,

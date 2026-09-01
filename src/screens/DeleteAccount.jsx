@@ -87,7 +87,7 @@ const DeleteAccountScreen = ({ navigation }) => {
     >
       <AppIcon />
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ paddingBottom: '25%' }}>
+        <View style={{ paddingBottom: 40 }}>
           <AppHeader
             title="Delete Your Account"
             subtitle="We're sorry to see you go. Deleting your account is permanent and cannot be undone."

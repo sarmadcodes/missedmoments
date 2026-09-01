@@ -15,6 +15,7 @@ import AppButton from '../../components/AppButton';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { useTabBarSpacer } from '../../theme/layout';
 
 // Dummy profile data — swap for real data once the API is wired up
 const dummyProfile = {
@@ -65,6 +66,7 @@ const AccountRow = ({ icon, label, onPress, danger, isLast }) => (
 );
 
 const ProfileScreen = ({ navigation }) => {
+  const tabBarSpacer = useTabBarSpacer();
   const [avatar, setAvatar] = useState(dummyProfile.avatar);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
@@ -99,7 +101,7 @@ const ProfileScreen = ({ navigation }) => {
     >
       <AppIcon />
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={{ paddingBottom: '25%' }}>
+        <View style={{ paddingBottom: tabBarSpacer }}>
           <AppHeader
             title="Profile"
             // rightContent={

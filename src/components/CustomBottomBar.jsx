@@ -37,12 +37,15 @@ const CustomBottomBar = ({ state, navigation }) => {
   }, [state.index]);
 
   return (
-    <View style={[styles.absoluteWrapper, { bottom: insets.bottom }]}>
+    <View style={[styles.absoluteWrapper, { bottom: 0 }]}>
       <LinearGradient
         colors={['#5E1414', '#A70D0D', '#661212']}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
-        style={styles.bar}
+        style={[
+          styles.bar,
+          { height: 75 + insets.bottom, paddingBottom: 8 + insets.bottom },
+        ]}
       >
         {state.routes.map((route, index) => {
           const anim = animations[index];
@@ -105,12 +108,10 @@ const styles = StyleSheet.create({
 
   bar: {
     flexDirection: 'row',
-    height: 75,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     elevation: 8,
     alignItems: 'flex-end',
-    paddingBottom: 8,
     overflow: 'hidden',
   },
 
