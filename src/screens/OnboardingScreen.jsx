@@ -55,18 +55,6 @@ const OnboardScreen = ({ navigation }) => {
       description:
         'A café. A train. A queue. You notice each other. Nothing is said.',
     },
-
-    {
-      image: require('../assets/images/overlay4.png'),
-
-      title: (
-        <>
-          Maybe we missed {'\n'} a <Text style={styles.goldText}>moment</Text>
-        </>
-      ),
-
-      description: 'Open the app. See who was near. Tap a heart. No one knows.',
-    },
   ];
 
   const currentData = onboardingData[currentStep];
