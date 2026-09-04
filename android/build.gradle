@@ -15,6 +15,11 @@ buildscript {
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        // Push notifications (Firebase Cloud Messaging). Declaring the
+        // classpath here is always safe -- it's only *applying* this plugin
+        // in app/build.gradle, gated on google-services.json existing, that
+        // would fail the build without real Firebase config.
+        classpath("com.google.gms:google-services:4.4.2")
     }
 }
 

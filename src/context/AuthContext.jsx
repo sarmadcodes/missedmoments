@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { auth as authApi, users as usersApi } from '../services/endpoints';
 import { saveTokens, clearTokens, getAccessToken } from '../services/storage';
+import { setupPushNotifications, teardownPushNotifications } from '../services/push';
 
 const AuthContext = createContext(null);
 
@@ -34,6 +35,11 @@ export const AuthProvider = ({ children }) => {
         const token = await getAccessToken();
         if (token) {
           await refreshUser();
+          // A restored session (app reopened, not a fresh login) still needs
+          // its push token registered/refreshed. Never blocks the splash
+          // screen on this -- it resolves to false rather than throwing if
+          // push isn't set up yet.
+          setupPushNotifications().catch(() => {});
         }
       } catch {
         // Token is missing, expired or the API is unreachable. Either way the
@@ -50,7 +56,9 @@ export const AuthProvider = ({ children }) => {
     async (email, password) => {
       const session = await authApi.login(email, password);
       await saveTokens(session);
-      return refreshUser();
+      const me = await refreshUser();
+      setupPushNotifications().catch(() => {});
+      return me;
     },
     [refreshUser],
   );
@@ -59,12 +67,17 @@ export const AuthProvider = ({ children }) => {
     async payload => {
       const session = await authApi.register(payload);
       await saveTokens(session);
-      return refreshUser();
+      const me = await refreshUser();
+      setupPushNotifications().catch(() => {});
+      return me;
     },
     [refreshUser],
   );
 
   const signOut = useCallback(async () => {
+    // Best effort, and deliberately before clearing local tokens: unregistering
+    // needs an authenticated call to look up this device's own token.
+    await teardownPushNotifications().catch(() => {});
     try {
       await authApi.logout();
     } catch {

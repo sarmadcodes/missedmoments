@@ -21,6 +21,7 @@ import BlockUsersScreen from './src/screens/BlockUsersScreen';
 import FeedbackScreen from './src/screens/FeedbackScreen';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider } from './src/context/AuthContext';
+import { navigationRef } from './src/navigation/navigationRef';
 
 // Created once at module scope. Building it inside the component made a brand
 // new navigator on every render.
@@ -39,7 +40,7 @@ const App = () => {
       <AuthProvider>
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
-        <NavigationContainer theme={navTheme}>
+        <NavigationContainer theme={navTheme} ref={navigationRef}>
           <Stack.Navigator
             screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
           >

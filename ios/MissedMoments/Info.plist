@@ -26,6 +26,14 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<!-- Lets a push notification wake the app briefly in the background
+		     to process it (e.g. update a badge) before the OS shows it.
+		     Requires the "Push Notifications" and "Background Modes"
+		     capabilities also be added in Xcode's Signing & Capabilities tab. -->
+		<string>remote-notification</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 	  <!-- Do not change NSAllowsArbitraryLoads to true, or you will risk app rejection! -->

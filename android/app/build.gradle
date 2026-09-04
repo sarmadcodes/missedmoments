@@ -2,6 +2,18 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Real release signing, loaded from a gitignored properties file so the
+// actual password never lands in source control. Falls back to null (which
+// the release signingConfig below treats as "use the debug key") so a fresh
+// clone without keystore.properties still builds -- that build just isn't
+// suitable for the Play Store, and there is no way around needing the real
+// file for an actual store submission.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -92,15 +104,25 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Real key when keystore.properties exists (see above); falls
+            // back to the debug key otherwise so the build itself never
+            // breaks, though that fallback build cannot be uploaded to the
+            // Play Store -- Google will reject a debug-signed release.
+            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
@@ -116,4 +138,14 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+}
+
+// Push notifications (Firebase Cloud Messaging). Applying this plugin
+// requires a real google-services.json in this directory -- without one,
+// applying it fails the whole build, so it is gated on the file actually
+// being present. Drop your real Firebase config file in here
+// (android/app/google-services.json) and it activates automatically on the
+// next build; nothing else needs to change.
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
 }

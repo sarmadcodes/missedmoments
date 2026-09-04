@@ -17,7 +17,10 @@ const DEV_HOST = Platform.select({
   default: 'http://localhost:4100',
 });
 
-export const API_BASE_URL = __DEV__ ? DEV_HOST : 'https://api.missedmoments.app';
+// Recommended CloudPanel subdomain (see the backend repo's deploy notes for
+// the exact DNS record and Nginx/SSL setup). Update this once the site is
+// live if a different subdomain is actually used.
+export const API_BASE_URL = __DEV__ ? DEV_HOST : 'https://missedmoments-api.threadique.live';
 
 // Requests time out rather than hanging forever on a dead network.
 export const API_TIMEOUT_MS = 15000;
