@@ -19,6 +19,7 @@ import { ErrorState } from '../components/ScreenState';
 import { chat as chatApi } from '../services/endpoints';
 import { useAuth } from '../context/AuthContext';
 import { avatarSource, friendlyError } from '../utils/format';
+import { useChatSocket } from '../hooks/useChatSocket';
 
 const ChattingScreen = ({ navigation, route }) => {
   const { user } = useAuth();
@@ -70,7 +71,10 @@ const ChattingScreen = ({ navigation, route }) => {
     setMessage('');
     try {
       const sent = await chatApi.send(matchId, text);
-      setMessages(prev => [...prev, sent]);
+      // Dedupe against the socket: the recipient side of a message never
+      // needs this, but if the server ever echoes our own send back too,
+      // a duplicate id must not render as two bubbles.
+      setMessages(prev => (prev.some(m => m.id === sent.id) ? prev : [...prev, sent]));
     } catch (err) {
       // Put the text back so nothing is silently lost.
       setMessage(text);
@@ -79,6 +83,23 @@ const ChattingScreen = ({ navigation, route }) => {
       setSending(false);
     }
   };
+
+  // Live incoming messages. Sending/history/read stay on REST above -- this
+  // is purely a push channel, so there is exactly one code path that can
+  // ever add a message a user didn't just type themselves.
+  useChatSocket(
+    matchId,
+    useCallback(
+      incoming => {
+        setMessages(prev =>
+          prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming],
+        );
+        // The thread is open, so the new message is being read as it arrives.
+        chatApi.markRead(matchId).catch(() => {});
+      },
+      [matchId],
+    ),
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
