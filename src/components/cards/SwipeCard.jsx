@@ -37,8 +37,11 @@ export const useCardMetrics = () => {
 
 const SwipeCard = ({ person, onPress }) => {
   const { cardWidth, cardHeight } = useCardMetrics();
-  const interests = person.interests || ['Music', 'Travel'];
-  const likes = person.likes ?? 120;
+  // The backend only ever sends a shared-interest count and a computed
+  // match score for a nearby person, never their interest names or a like
+  // count -- there's no such data to show. Both pills below reflect that.
+  const sharedInterests = person.sharedInterests ?? 0;
+  const matchPercentage = person.matchPercentage;
 
   return (
     <View style={[styles.card, { width: cardWidth, height: cardHeight }]}>
@@ -66,22 +69,26 @@ const SwipeCard = ({ person, onPress }) => {
         ) : null}
 
         <View style={styles.detailRow}>
-          <View style={styles.infoPill}>
-            <Ionicons name="heart-outline" size={11} color="#D4A84A" />
-            <Text style={styles.infoText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
-              {likes} likes
-            </Text>
-          </View>
-          <View style={styles.infoPill}>
-            <Ionicons name="sparkles-outline" size={11} color="#D4A84A" />
-            <Text
-              style={styles.infoText}
-              numberOfLines={1}
-              maxFontSizeMultiplier={MAX_FONT_SCALE}
-            >
-              {interests.slice(0, 2).join(' • ')}
-            </Text>
-          </View>
+          {matchPercentage != null ? (
+            <View style={styles.infoPill}>
+              <Ionicons name="heart-outline" size={11} color="#D4A84A" />
+              <Text style={styles.infoText} maxFontSizeMultiplier={MAX_FONT_SCALE}>
+                {matchPercentage}% match
+              </Text>
+            </View>
+          ) : null}
+          {sharedInterests > 0 ? (
+            <View style={styles.infoPill}>
+              <Ionicons name="sparkles-outline" size={11} color="#D4A84A" />
+              <Text
+                style={styles.infoText}
+                numberOfLines={1}
+                maxFontSizeMultiplier={MAX_FONT_SCALE}
+              >
+                {sharedInterests} shared interest{sharedInterests === 1 ? '' : 's'}
+              </Text>
+            </View>
+          ) : null}
           <TouchableOpacity
             onPress={onPress}
             activeOpacity={0.66}

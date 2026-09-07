@@ -173,14 +173,16 @@ const MatchesScreen = ({ navigation }) => {
     extrapolate: 'clamp',
   });
 
-  // The API's nearby shape mapped onto what SwipeCard expects.
+  // The API's nearby shape mapped onto what SwipeCard expects. Only real
+  // fields the backend actually returns -- no fabricated interest list or
+  // like count (see SwipeCard.jsx for why those were removed).
   const toCardPerson = person => ({
     image: avatarSource(person.photoUrl, person.userId),
     name: person.name,
     age: person.age,
     location: person.placeName || `${person.distanceMetres}m away`,
-    interests: [],
-    likes: person.matchPercentage,
+    sharedInterests: person.sharedInterests,
+    matchPercentage: person.matchPercentage,
   });
 
   const renderCards = () => {
