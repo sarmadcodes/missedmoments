@@ -55,7 +55,12 @@ export const getCurrentPosition = () =>
           capturedAt: new Date(pos.timestamp).toISOString(),
         }),
       err => reject(new Error(err.message || 'Could not get location')),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+      // Not enableHighAccuracy: true -- confirmed on a real device that a
+      // cold GPS lock indoors routinely exceeded even a 15s timeout. A
+      // "moment" only needs to place someone within MOMENT_RADIUS_METRES
+      // (150m), which cell/Wi-Fi based positioning comfortably covers, and
+      // it typically returns in a couple of seconds instead of tens.
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 },
     );
   });
 
