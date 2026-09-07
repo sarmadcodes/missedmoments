@@ -76,3 +76,9 @@ yarn-error.log
 
 # Release signing -- never commit real passwords or the actual keystore
 android/keystore.properties
+
+# Per-environment Firebase config -- not secret (it ships inside the built
+# app itself, extractable from any APK), but keeping it out of git so a
+# fresh clone doesn't silently build with someone else's Firebase project.
+android/app/google-services.json
+ios/MissedMoments.xcodeproj/GoogleService-Info.plist
