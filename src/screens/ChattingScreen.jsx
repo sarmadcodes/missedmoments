@@ -117,7 +117,11 @@ const ChattingScreen = ({ navigation, route }) => {
           <Text style={styles.headerSubtitle}>{chat.location}</Text>
         </View>
 
-        <TouchableOpacity style={styles.iconBtn}>
+        <TouchableOpacity
+          style={styles.iconBtn}
+          disabled={!routeChat.userId}
+          onPress={() => navigation.navigate('PersonProfile', { userId: routeChat.userId })}
+        >
           <Ionicons name="ellipsis-vertical" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
