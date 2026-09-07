@@ -31,25 +31,6 @@ jest.mock('react-native-image-picker', () => ({
   launchCamera: jest.fn(async () => ({ didCancel: true })),
 }));
 
-// notifee is imported eagerly at the top of src/services/push.js (unlike
-// @react-native-firebase/messaging, which that file requires lazily inside a
-// try/catch specifically so a project with no Firebase config yet doesn't
-// crash) -- without this mock, that eager import alone breaks every test
-// that transitively pulls in AuthContext, since there is no native module
-// for it under Jest.
-jest.mock('@notifee/react-native', () => ({
-  __esModule: true,
-  default: {
-    createChannel: jest.fn(async () => 'missedmoments-default'),
-    displayNotification: jest.fn(async () => {}),
-    onForegroundEvent: jest.fn(() => () => {}),
-    onBackgroundEvent: jest.fn(),
-    getInitialNotification: jest.fn(async () => null),
-  },
-  AndroidImportance: { HIGH: 4 },
-  EventType: { PRESS: 1 },
-}));
-
 // Deferred in src/services/push.js and index.js specifically so a missing
 // native Firebase config degrades to push-disabled rather than crashing; this
 // mock exists only so a *test* importing those files doesn't hit "module not

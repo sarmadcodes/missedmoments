@@ -1,5 +1,4 @@
 import { Platform } from 'react-native';
-import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
 import { navigate } from '../navigation/navigationRef';
 import { api } from './api';
 
@@ -13,18 +12,24 @@ import { api } from './api';
  * code ships now, credentials arrive later, and nothing about signing in,
  * discovering, matching or chatting should ever depend on push existing.
  *
- * Foreground: FCM delivers a data-only-feeling event to JS (Android does not
- * auto-show a system notification while the app is foregrounded), so a local
- * notification is shown here via notifee, which is also what supplies proper
- * Android notification channels.
- * Background: the OS shows the system notification on its own; only the tap
- * needs handling here (see registerNotificationOpenHandlers).
- * Killed: same as background, plus messaging().getInitialNotification() /
- * notifee.getInitialNotification() catch the tap that actually launched
- * the app, which the background listener alone would miss.
+ * Background and killed: the OS shows the system notification and handles
+ * delivery on its own -- this only needs to catch the tap
+ * (registerNotificationOpenHandlers). That covers the large majority of real
+ * pushes, since most arrive while the app isn't open.
+ *
+ * Foreground: FCM does not auto-show a system notification while the app is
+ * open on Android. This deliberately does NOT display one either -- an
+ * on-device test found @notifee/react-native's native module failing to
+ * link under this project's New Architecture build (RN 0.82,
+ * newArchEnabled=true), throwing "Notifee native module not found" and
+ * crashing the app at JS startup. Chasing that library's New Architecture
+ * compatibility is out of scope for this launch; the user is already
+ * looking at the app when a push arrives in foreground, so the in-app
+ * notification feed (GET /v1/notifications) is what actually needs to
+ * reflect it, not a redundant system banner. If a foreground banner is
+ * wanted later, re-adding notifee (or swapping to a New Architecture-proven
+ * alternative) is an isolated, additive change to this one file.
  */
-
-const CHANNEL_ID = 'missedmoments-default';
 
 let messagingModule = null;
 const getMessaging = () => {
@@ -53,19 +58,10 @@ const openFromData = data => {
   }
 };
 
-const ensureAndroidChannel = async () => {
-  if (Platform.OS !== 'android') return;
-  await notifee.createChannel({
-    id: CHANNEL_ID,
-    name: 'MissedMoments',
-    importance: AndroidImportance.HIGH,
-  });
-};
-
 /**
  * Asks for permission, gets a token, registers it with the backend, and
- * wires up foreground display + tap routing. Call once after a successful
- * sign-in; safe to call again on every app launch for a signed-in user.
+ * wires up tap routing. Call once after a successful sign-in; safe to call
+ * again on every app launch for a signed-in user.
  *
  * Resolves to false (never throws) if push cannot be set up for any reason
  * -- missing native config, permission denied, or a fresh Expo Go-style
@@ -82,8 +78,6 @@ export const setupPushNotifications = async () => {
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
     if (!enabled) return false;
 
-    await ensureAndroidChannel();
-
     const token = await messaging().getToken();
     if (token) {
       await registerToken(token);
@@ -94,15 +88,10 @@ export const setupPushNotifications = async () => {
     // token that no longer resolves to this device.
     messaging().onTokenRefresh(registerToken);
 
-    // Foreground: show it ourselves, since Android does not.
-    messaging().onMessage(async remoteMessage => {
-      await notifee.displayNotification({
-        title: remoteMessage.notification?.title,
-        body: remoteMessage.notification?.body,
-        data: remoteMessage.data,
-        android: { channelId: CHANNEL_ID, pressAction: { id: 'default' } },
-      });
-    });
+    // Foreground messages still arrive here; nothing is displayed for them
+    // (see the file header), but this keeps the listener registered so a
+    // future foreground-banner feature has a single place to add it.
+    messaging().onMessage(() => {});
 
     registerNotificationOpenHandlers(messaging);
 
@@ -115,8 +104,7 @@ export const setupPushNotifications = async () => {
 
 /** Tap routing for background, and the tap that launched the app from killed. */
 const registerNotificationOpenHandlers = messaging => {
-  // A system notification tap while backgrounded (message delivered natively
-  // by FCM/APNs, not through notifee).
+  // A system notification tap while backgrounded.
   messaging().onNotificationOpenedApp(remoteMessage => {
     openFromData(remoteMessage?.data);
   });
@@ -127,17 +115,6 @@ const registerNotificationOpenHandlers = messaging => {
     .then(remoteMessage => {
       if (remoteMessage) openFromData(remoteMessage.data);
     });
-
-  // A tap on a notification notifee itself displayed (the foreground path).
-  notifee.onForegroundEvent(({ type, detail }) => {
-    if (type === EventType.PRESS) openFromData(detail.notification?.data);
-  });
-  notifee.onBackgroundEvent(async ({ type, detail }) => {
-    if (type === EventType.PRESS) openFromData(detail.notification?.data);
-  });
-  notifee.getInitialNotification().then(initial => {
-    if (initial) openFromData(initial.notification?.data);
-  });
 };
 
 const registerToken = async token => {
