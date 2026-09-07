@@ -208,7 +208,7 @@ const RegisterScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
       <ScrollView
         contentContainerStyle={styles.container}

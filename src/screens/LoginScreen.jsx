@@ -58,7 +58,7 @@ const Loginscreen = ({ navigation }) => {
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}

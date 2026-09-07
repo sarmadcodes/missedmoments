@@ -13,7 +13,13 @@ import { api } from './api';
 Geolocation.setRNConfiguration({
   skipPermissionRequests: true, // we ask explicitly, below
   authorizationLevel: 'whenInUse',
-  locationProvider: 'auto', // uses Google Play Services when available
+  // NOT 'auto': on a real device with location permission granted and
+  // location services on, 'auto' still threw "No location provider
+  // available" -- a known issue with this library's Play Services
+  // detection path. 'android' talks to the platform LocationManager
+  // directly (GPS_PROVIDER/NETWORK_PROVIDER), which is what dumpsys
+  // confirmed is actually enabled and serving a real fix on this device.
+  locationProvider: 'android',
 });
 
 export const requestLocationPermission = async () => {

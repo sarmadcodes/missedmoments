@@ -126,9 +126,15 @@ const ChattingScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
+      {/* Android already resizes the window for the keyboard via
+          android:windowSoftInputMode="adjustResize" in the manifest.
+          Stacking KeyboardAvoidingView's own "height" behavior on top of
+          that double-compensated, on a real device, pushing the input bar
+          almost entirely behind the keyboard. iOS has no such manifest
+          setting, so it still needs "padding" here. */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={10}
       >
         <ScrollView
