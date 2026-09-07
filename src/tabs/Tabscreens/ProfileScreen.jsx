@@ -21,6 +21,7 @@ import { useTabBarSpacer } from '../../theme/layout';
 import { users as usersApi } from '../../services/endpoints';
 import { useAuth } from '../../context/AuthContext';
 import { avatarSource, friendlyError } from '../../utils/format';
+import { otherTestAccount } from '../../config/testAccounts';
 
 const accountItems = [
   {
@@ -66,11 +67,27 @@ const AccountRow = ({ icon, label, onPress, danger, isLast }) => (
 
 const ProfileScreen = ({ navigation }) => {
   const tabBarSpacer = useTabBarSpacer();
-  const { user, signOut, refreshUser } = useAuth();
+  const { user, signIn, signOut, refreshUser } = useAuth();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [profile, setProfile] = useState(user);
+  const [switching, setSwitching] = useState(false);
+
+  // TESTING UTILITY -- see src/config/testAccounts.js. Remove before a
+  // production submission.
+  const handleSwitchAccount = async () => {
+    const target = otherTestAccount(profile?.email);
+    setSwitching(true);
+    try {
+      await signOut();
+      await signIn(target.email, target.password);
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setSwitching(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setError(null);
@@ -227,6 +244,22 @@ const ProfileScreen = ({ navigation }) => {
                 onPress={() => navigation.navigate(item.screen)}
               />
             ))}
+          </View>
+
+          {/* TESTING UTILITY -- remove this whole section before a
+              production submission. See src/config/testAccounts.js. */}
+          <Text style={styles.sectionTitle}>Testing</Text>
+          <View style={styles.card}>
+            <AccountRow
+              icon="swap-horizontal-outline"
+              label={
+                switching
+                  ? 'Switching...'
+                  : `Switch to ${otherTestAccount(profile?.email).label}`
+              }
+              isLast
+              onPress={switching ? undefined : handleSwitchAccount}
+            />
           </View>
 
           <Text style={styles.sectionTitle}>Account Actions</Text>
