@@ -77,8 +77,9 @@ yarn-error.log
 # Release signing -- never commit real passwords or the actual keystore
 android/keystore.properties
 
-# Per-environment Firebase config -- not secret (it ships inside the built
-# app itself, extractable from any APK), but keeping it out of git so a
-# fresh clone doesn't silently build with someone else's Firebase project.
-android/app/google-services.json
-ios/MissedMoments.xcodeproj/GoogleService-Info.plist
+# NOTE: android/app/google-services.json and
+# ios/MissedMoments/GoogleService-Info.plist ARE committed on purpose. They are
+# Firebase *client* config (they ship inside every built app and are
+# extractable from any APK/IPA), not secrets, and the iOS build on another
+# machine needs the plist present. The real secret is the server-side
+# FIREBASE_SERVICE_ACCOUNT_JSON, which lives only in the server's .env.

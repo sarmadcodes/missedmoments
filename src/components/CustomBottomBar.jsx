@@ -26,7 +26,6 @@ const CustomBottomBar = ({ state, navigation }) => {
   ).current;
 
   useEffect(() => {
-    
     animations.forEach((anim, i) => {
       Animated.timing(anim, {
         toValue: i === state.index ? 1 : 0,
@@ -34,7 +33,7 @@ const CustomBottomBar = ({ state, navigation }) => {
         useNativeDriver: true,
       }).start();
     });
-  }, [state.index]);
+  }, [state.index, animations]);
 
   return (
     <View style={[styles.absoluteWrapper, { bottom: 0 }]}>

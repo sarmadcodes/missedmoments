@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Push Notifications. "development" is the value Xcode expects checked
+	     in; when you Archive/export for the App Store, Xcode re-signs with the
+	     distribution provisioning profile and the shipped value becomes
+	     "production" automatically. The App ID must have the Push
+	     Notifications capability enabled in the Apple Developer account. -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

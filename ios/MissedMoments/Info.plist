@@ -28,15 +28,10 @@
 	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
-		<!-- Lets a push notification wake the app briefly in the background
-		     to process it (e.g. update a badge) before the OS shows it.
-		     Requires the "Push Notifications" and "Background Modes"
-		     capabilities also be added in Xcode's Signing & Capabilities tab. -->
 		<string>remote-notification</string>
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-	  <!-- Do not change NSAllowsArbitraryLoads to true, or you will risk app rejection! -->
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 		<key>NSAllowsLocalNetworking</key>
@@ -46,8 +41,6 @@
 	<string>MissedMoments uses your location to show people who were nearby at the same time as you. Your exact location is never shown to anyone.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose photos from your library for your profile and your moments.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Save photos from MissedMoments to your library.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Take a photo for your profile without leaving the app.</string>
 	<key>UILaunchStoryboardName</key>
@@ -59,10 +52,14 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Ionicons.ttf</string>
+	</array>
 </dict>
 </plist>

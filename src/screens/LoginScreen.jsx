@@ -1,5 +1,4 @@
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -46,11 +45,6 @@ const Loginscreen = ({ navigation }) => {
     }
   };
 
-  const notImplemented = provider =>
-    Alert.alert(
-      `${provider} sign-in`,
-      'Social sign-in is not connected yet. Use your email and password for now.',
-    );
 
   return (
     <SafeAreaView
@@ -140,28 +134,6 @@ const Loginscreen = ({ navigation }) => {
               />
             </View>
 
-            <View style={styles.dividerContainer}>
-              <View style={styles.line} />
-              <Text style={styles.dividerText}>Or Continue with</Text>
-              <View style={styles.line} />
-            </View>
-
-            <View style={styles.socialRow}>
-              {[
-                ['logo-google', 'Google'],
-                ['logo-apple', 'Apple'],
-                ['logo-facebook', 'Facebook'],
-              ].map(([icon, name]) => (
-                <TouchableOpacity
-                  key={name}
-                  activeOpacity={0.66}
-                  style={styles.socialBox}
-                  onPress={() => notImplemented(name)}
-                >
-                  <Ionicons name={icon} color="#ccc" size={25} />
-                </TouchableOpacity>
-              ))}
-            </View>
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account? </Text>
@@ -235,33 +207,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 15,
-  },
-  line: { flex: 1, height: 1, backgroundColor: '#777' },
-  dividerText: { paddingHorizontal: 10, fontSize: 11, color: '#ccc' },
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 30,
-    marginTop: 15,
-  },
-  socialBox: {
-    width: '30%',
-    height: 50,
-    borderWidth: 1,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderColor: '#777',
-  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 28,
   },
   footerText: { fontSize: 12, fontWeight: '600', color: '#ffffffde' },
   signUpText: { fontSize: 13, fontWeight: '700', color: '#D4A84A' },
