@@ -13,6 +13,10 @@ prepare_react_native_project!
 # static framework linkage is the default here rather than opt-in. Override
 # with USE_FRAMEWORKS=dynamic only if you know you need to.
 $RNFirebaseAsStaticFramework = true
+# react-native-firebase 26 resolves firebase-ios-sdk through Swift Package
+# Manager by default, which collides at link time with static frameworks
+# (duplicate symbols). Opt out so it uses the regular CocoaPods Firebase pods.
+$RNFirebaseDisableSPM = true
 linkage = ENV['USE_FRAMEWORKS'] || 'static'
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
