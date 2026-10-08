@@ -14,3 +14,11 @@ gem 'bigdecimal'
 gem 'logger'
 gem 'benchmark'
 gem 'mutex_m'
+
+# Ruby 4.0 removed more libraries from the standard library. xcodeproj (used by
+# CocoaPods) does `require 'kconv'`, which now lives in the nkf gem -- without
+# it `pod install` crashes with "cannot load such file -- kconv".
+gem 'nkf'
+gem 'ostruct'
+gem 'base64'
+gem 'drb'
